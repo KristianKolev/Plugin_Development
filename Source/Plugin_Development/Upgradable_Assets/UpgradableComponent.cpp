@@ -32,3 +32,8 @@ void UUpgradableComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 	// ...
 }
 
+void UUpgradableComponent::Upgrade_Implementation()
+{
+	
+}
+
