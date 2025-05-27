@@ -201,7 +201,6 @@ Backup/*
 *.blend3
 *.blend4
 *.gltf
-*.obj
 *.ztl
 *.spm
 *.st
@@ -216,7 +215,6 @@ Backup/*
 *.kra
 *.tga
 *.spp
-*.xcf
 *.assbin
 *.png
 
@@ -343,3 +341,4 @@ Content/MyFirstGame/Cell/Organelles/SM_40sSubunit.uasset
 Content/MyFirstGame/Cell/Organelles/SM_60sSubunit.uasset
 Build/
 Content/Characters/
+Config/DefaultEngine.ini
