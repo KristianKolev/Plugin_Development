@@ -7,6 +7,7 @@
 #include "Upgradable.h"
 #include "UpgradableComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnLevelChangedDelegate, int32, OldLevel, int32, NewLevel);
 
 UCLASS( ClassGroup=(Custom), Blueprintable, meta=(BlueprintSpawnableComponent) )
 class PLUGIN_DEVELOPMENT_API UUpgradableComponent : public UActorComponent, public IUpgradable
@@ -16,20 +17,34 @@ class PLUGIN_DEVELOPMENT_API UUpgradableComponent : public UActorComponent, publ
 public:	
 	// Sets default values for this component's properties
 	UUpgradableComponent();
-
-protected:
-	// Called when the game starts
-	virtual void BeginPlay() override;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Upgradable")
-	int32 Level;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Upgradable")
-	int32 MaxLevel;
 	
 
-public:	
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	virtual void Upgrade_Implementation();		
-};
+	UPROPERTY(BlueprintAssignable, Category = "Upgradable")
+	FOnLevelChangedDelegate OnLevelChanged;
+
+	virtual int32 GetUpgradeLevel_Implementation() const override { return CurrentLevel; }
+
+	virtual void RequestUpgrade_Implementation() override;
+	
+	void ApplyUpgradeInternal();
+
+private:
+	virtual void BeginPlay() override;
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	UFUNCTION()
+	void OnRep_CurrentLevel();
+
+	UPROPERTY(ReplicatedUsing=OnRep_CurrentLevel)
+	int32 CurrentLevel = 0;
+
+	virtual bool CanUpgrade_Implementation() const override;
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_RequestUpgrade();
+	void Server_RequestUpgrade_Implementation();
+	bool Server_RequestUpgrade_Validate();
+
+};	
