@@ -11,10 +11,10 @@ struct PLUGIN_DEVELOPMENT_API FResourceType
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString Description;
+	FString Description {"Info"};
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString Name;
+	FString Name {"Stuff"};
 };
 
 
@@ -24,10 +24,8 @@ struct PLUGIN_DEVELOPMENT_API FUpgradeLevelData
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FResourceType ResourceType;
+	TArray<FResourceType> ResourceTypes;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	int32 UpgradeCost;
-
-
+	TArray<int32> UpgradeCosts;
 };

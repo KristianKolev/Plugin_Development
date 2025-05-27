@@ -17,7 +17,7 @@ public:
 	void InitializeFromJson(const FString& Json);
 
 	virtual const FUpgradeLevelData* GetLevelData(int32 Level) const override;
-	virtual int32 GetMaxLevels() const override;
+	virtual int32 GetMaxLevel() const override;
 
 protected:
 	UPROPERTY()

@@ -18,14 +18,14 @@ public:
 	// Sets default values for this component's properties
 	UUpgradableComponent();
 	
-
-
 	UPROPERTY(BlueprintAssignable, Category = "Upgradable")
 	FOnLevelChangedDelegate OnLevelChanged;
 
-	virtual int32 GetUpgradeLevel_Implementation() const override { return CurrentLevel; }
+	virtual int32 GetCurrentUpgradeLevel_Implementation() const override { return CurrentLevel; }
 
 	virtual void RequestUpgrade_Implementation() override;
+
+	virtual bool CanUpgrade_Implementation() const override;
 	
 	void ApplyUpgradeInternal();
 
@@ -39,9 +39,7 @@ private:
 
 	UPROPERTY(ReplicatedUsing=OnRep_CurrentLevel)
 	int32 CurrentLevel = 0;
-
-	virtual bool CanUpgrade_Implementation() const override;
-
+	
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_RequestUpgrade();
 	void Server_RequestUpgrade_Implementation();

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "UpgradableComponent.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "UpgradeManagerSubsystem.generated.h"
 
@@ -21,7 +22,20 @@ class PLUGIN_DEVELOPMENT_API UUpgradeManagerSubsystem : public UWorldSubsystem
 public:
 	void InitializeProviderFromJson(const FString& Json);
 	void HandleUpgradeRequest(UUpgradableComponent* Component) const;
+	void LoadJsonFromFile();
 	bool CanUpgrade(const UUpgradableComponent* Component) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Upgrade Status")
+	int32 GetCurrentLevel(const UUpgradableComponent* Component) const { return Component->GetCurrentUpgradeLevel_Implementation(); }
+
+	UFUNCTION(BlueprintCallable, Category = "Upgrade Status")
+	TArray<int32> GetNextLevelUpgradeCosts(const UUpgradableComponent* Component) const ;
+
+	UFUNCTION(BlueprintCallable, Category = "Upgrade Status")
+	int32 GetMaxLevel() const ;
+	
+	UFUNCTION(BlueprintCallable, Category = "Upgrade Status")
+	void UpgradeComponent(UUpgradableComponent* Component) const { HandleUpgradeRequest(Component) ;}
 
 protected:
 	UPROPERTY()

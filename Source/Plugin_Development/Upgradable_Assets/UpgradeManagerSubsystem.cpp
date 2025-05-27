@@ -13,6 +13,7 @@ UUpgradeManagerSubsystem::UUpgradeManagerSubsystem()
 void UUpgradeManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
+	LoadJsonFromFile();
 }
 
 void UUpgradeManagerSubsystem::Deinitialize()
@@ -30,7 +31,23 @@ void UUpgradeManagerSubsystem::InitializeProviderFromJson(const FString& Json)
 
 bool UUpgradeManagerSubsystem::CanUpgrade(const UUpgradableComponent* Component) const
 {
-	return Provider && Component->GetUpgradeLevel_Implementation() < Provider->GetMaxLevels() - 1;
+	return Provider && Component->GetCurrentUpgradeLevel_Implementation() < Provider->GetMaxLevel() - 1;
+}
+
+TArray<int32> UUpgradeManagerSubsystem::GetNextLevelUpgradeCosts(const UUpgradableComponent* Component) const
+{
+	TArray<int32> Costs;
+	int32 NextLevel = Component->GetCurrentUpgradeLevel_Implementation() + 1;
+	if (Provider && Provider->GetLevelData(NextLevel))
+	{
+		Costs = Provider->GetLevelData(NextLevel)->UpgradeCosts;
+	}
+	return Costs;
+}
+
+int32 UUpgradeManagerSubsystem::GetMaxLevel() const
+{
+	return Provider->GetMaxLevel();
 }
 
 void UUpgradeManagerSubsystem::HandleUpgradeRequest(UUpgradableComponent* Component) const
@@ -39,15 +56,31 @@ void UUpgradeManagerSubsystem::HandleUpgradeRequest(UUpgradableComponent* Compon
 
 	if (!CanUpgrade(Component)) return;
 
-	const int32 NextLevel = Component->GetUpgradeLevel_Implementation() + 1;
+	const int32 NextLevel = Component->GetCurrentUpgradeLevel_Implementation() + 1;
 	const FUpgradeLevelData* LevelData = Provider->GetLevelData(NextLevel);
 
 	if (!LevelData) return;
 
-	APlayerState* PS = Cast<APawn>(Component->GetOwner())->GetPlayerState<APlayerState>();
-	if (!PS || PS->GetScore() < LevelData->UpgradeCost) return;
-
-	
-	PS->SetScore(PS->GetScore() - LevelData->UpgradeCost);
+	// APlayerState* PS = Cast<APawn>(Component->GetOwner())->GetPlayerState<APlayerState>();
+	// if (!PS || PS->GetScore() < LevelData->UpgradeCost) return;
+	//
+	//
+	// PS->SetScore(PS->GetScore() - LevelData->UpgradeCost);
 	Component->ApplyUpgradeInternal();
+}
+
+void UUpgradeManagerSubsystem::LoadJsonFromFile()
+{
+	const FString FilePath = FPaths::ProjectContentDir() / TEXT("Data/UpgradeLevels.json");
+	FString JsonString;
+
+	if (FPaths::FileExists(FilePath) && FFileHelper::LoadFileToString(JsonString, *FilePath))
+	{
+		InitializeProviderFromJson(JsonString);
+		UE_LOG(LogTemp, Log, TEXT("UpgradeLevels.json loaded successfully."));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to load UpgradeLevels.json from %s"), *FilePath);
+	}
 }

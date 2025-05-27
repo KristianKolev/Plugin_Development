@@ -20,7 +20,7 @@ class PLUGIN_DEVELOPMENT_API IUpgradable
 public:
 	
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Upgradable")
-	int32 GetUpgradeLevel() const;
+	int32 GetCurrentUpgradeLevel() const;
 	
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Upgradable")
 	bool CanUpgrade() const;
