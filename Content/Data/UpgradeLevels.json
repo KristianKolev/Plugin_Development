@@ -1,0 +1,39 @@
+{
+  "levels": [
+      {
+      "description": "No upgrade",
+      "resources": [
+        { "type": "Gold", "amount": 10 },
+        { "type": "Iron", "amount": 5 }
+      ]
+    },
+    {
+      "description": "Basic upgrade",
+      "resources": [
+        { "type": "Gold", "amount": 100 },
+        { "type": "Iron", "amount": 50 }
+      ]
+    },
+    {
+      "description": "Advanced upgrade",
+      "resources": [
+        { "type": "Gold", "amount": 200 },
+        { "type": "Iron", "amount": 75 }
+      ]
+    },
+    {
+      "description": "Expert upgrade",
+      "resources": [
+        { "type": "Gold", "amount": 300 },
+        { "type": "Iron", "amount": 100 }
+      ]
+    },
+    {
+      "description": "Master upgrade",
+      "resources": [
+        { "type": "Gold", "amount": 500 },
+        { "type": "Iron", "amount": 150 }
+      ]
+    }
+  ]
+}

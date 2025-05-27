@@ -1,0 +1,16 @@
+{
+  "levels": [
+    {
+      "cost": 0,
+      "description": "Level 0 Upgrade"
+    },
+    {
+      "cost": 100,
+      "description": "Level 1 Upgrade"
+    },
+    {
+      "cost": 200,
+      "description": "Level 2 Upgrade"
+    }
+  ]
+}
