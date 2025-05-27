@@ -7,7 +7,7 @@
 #include "Upgradable.generated.h"
 
 // This class does not need to be modified.
-UINTERFACE(MinimalAPI)
+UINTERFACE(MinimalAPI, Blueprintable)
 class UUpgradable : public UInterface
 {
 	GENERATED_BODY()
@@ -19,6 +19,12 @@ class PLUGIN_DEVELOPMENT_API IUpgradable
 	
 public:
 	
-	UFUNCTION(BlueprintNativeEvent, Category = "Upgradable")
-	void Upgrade();
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Upgradable")
+	int32 GetUpgradeLevel() const;
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Upgradable")
+	bool CanUpgrade() const;
+
+	UFUNCTION(BlueprintNativeEvent,BlueprintCallable, Category = "Upgradable")
+	void RequestUpgrade();
 };
