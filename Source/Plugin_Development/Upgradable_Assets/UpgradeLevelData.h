@@ -43,7 +43,7 @@ struct PLUGIN_DEVELOPMENT_API FUpgradeLevelData
 	TArray<int32> UpgradeCosts;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TArray<int32> UpgradeSeconds;
+	int32 UpgradeSeconds = 0;
 };
 
 USTRUCT(BlueprintType)

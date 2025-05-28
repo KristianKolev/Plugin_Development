@@ -87,7 +87,7 @@ void UUpgradeJsonProvider::InitializeFromJson(const FString& Json)
 			int32 UpgradeSeconds;
 			if ((*LevelObj)->TryGetNumberField(TEXT("upgradeSeconds"), UpgradeSeconds))
 			{
-				Data.UpgradeSeconds.Add(UpgradeSeconds);
+				Data.UpgradeSeconds = UpgradeSeconds;
 			}
 			else
 			{

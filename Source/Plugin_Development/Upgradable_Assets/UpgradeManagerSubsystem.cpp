@@ -34,6 +34,28 @@ bool UUpgradeManagerSubsystem::CanUpgrade(const UUpgradableComponent* Component)
 	return Provider && Component->GetCurrentUpgradeLevel_Implementation() < Provider->GetMaxLevel() - 1;
 }
 
+int32 UUpgradeManagerSubsystem::GetCurrentLevel(const int32 ComponentId) const
+{
+	if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
+	{
+		return Comp->GetCurrentUpgradeLevel_Implementation();
+	}
+	return -1;
+}
+int32 UUpgradeManagerSubsystem::GetNextLevel(const int32 ComponentId) const
+{
+	if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
+	{
+		return Comp->GetCurrentUpgradeLevel_Implementation() + 1;
+	}
+	return -1;
+}
+
+int32 UUpgradeManagerSubsystem::GetMaxLevel() const
+{
+	return Provider->GetMaxLevel();
+}
+
 TArray<int32> UUpgradeManagerSubsystem::GetNextLevelUpgradeCosts(const UUpgradableComponent* Component) const
 {
 	TArray<int32> Costs;
@@ -45,10 +67,21 @@ TArray<int32> UUpgradeManagerSubsystem::GetNextLevelUpgradeCosts(const UUpgradab
 	return Costs;
 }
 
-int32 UUpgradeManagerSubsystem::GetMaxLevel() const
+int32 UUpgradeManagerSubsystem::GetNextLevelUpgradeTime(const int32 ComponentId) const
 {
-	return Provider->GetMaxLevel();
+	int32 NextLevel = -1;
+	int32 SecondsForUpgrade = -1;
+	if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
+	{
+		NextLevel = GetNextLevel(ComponentId);
+	}
+	if (Provider && Provider->GetLevelData(NextLevel))
+	{
+		SecondsForUpgrade = Provider->GetLevelData(NextLevel)->UpgradeSeconds;
+	}
+	return SecondsForUpgrade;
 }
+
 
 int32 UUpgradeManagerSubsystem::RegisterUpgradableComponent(UUpgradableComponent* Component)
 {
@@ -125,3 +158,5 @@ UUpgradableComponent* UUpgradeManagerSubsystem::GetComponentById(const int32 Id)
 			? RegisteredComponents[Id].Get()
 			: nullptr);
 }
+
+

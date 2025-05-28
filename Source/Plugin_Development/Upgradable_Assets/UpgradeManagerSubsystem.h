@@ -30,10 +30,16 @@ public:
 	UUpgradableComponent* GetComponentById(int32 Id) const;
 	
 	UFUNCTION(BlueprintCallable, Category = "Upgrade Status")
-	int32 GetCurrentLevel(const UUpgradableComponent* Component) const { return Component->GetCurrentUpgradeLevel_Implementation(); }
+	int32 GetCurrentLevel(const int32 ComponentId) const ;
+
+	UFUNCTION(BlueprintCallable, Category = "Upgrade Status")
+	int32 GetNextLevel(const int32 ComponentId) const ; 
 
 	UFUNCTION(BlueprintCallable, Category = "Upgrade Status")
 	TArray<int32> GetNextLevelUpgradeCosts(const UUpgradableComponent* Component) const ;
+
+	UFUNCTION(BlueprintCallable, Category = "Upgrade Status")
+	int32 GetNextLevelUpgradeTime(const int32 ComponentId) const ;
 
 	UFUNCTION(BlueprintCallable, Category = "Upgrade Status")
 	int32 GetMaxLevel() const ;
