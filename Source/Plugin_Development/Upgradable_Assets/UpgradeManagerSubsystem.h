@@ -21,10 +21,14 @@ class PLUGIN_DEVELOPMENT_API UUpgradeManagerSubsystem : public UWorldSubsystem
 	
 public:
 	void InitializeProviderFromJson(const FString& Json);
-	void HandleUpgradeRequest(UUpgradableComponent* Component) const;
+	void HandleUpgradeRequest(int32 ComponentId, int32 LevelIncrease) const;
 	void LoadJsonFromFile();
-	bool CanUpgrade(const UUpgradableComponent* Component) const;
 
+	bool CanUpgrade(const UUpgradableComponent* Component) const;
+	
+	UFUNCTION(BlueprintCallable, Category = "Upgrade Status")
+	UUpgradableComponent* GetComponentById(int32 Id) const;
+	
 	UFUNCTION(BlueprintCallable, Category = "Upgrade Status")
 	int32 GetCurrentLevel(const UUpgradableComponent* Component) const { return Component->GetCurrentUpgradeLevel_Implementation(); }
 
@@ -35,9 +39,23 @@ public:
 	int32 GetMaxLevel() const ;
 	
 	UFUNCTION(BlueprintCallable, Category = "Upgrade Status")
-	void UpgradeComponent(UUpgradableComponent* Component) const { HandleUpgradeRequest(Component) ;}
+	void UpgradeComponent(const int32 ComponentId, const int32 LevelIncrease = 1) const { HandleUpgradeRequest(ComponentId, LevelIncrease) ;}
+
+	int32 RegisterUpgradableComponent(UUpgradableComponent* Component);
+	void UpdateUpgradeLevel(int32 ComponentId, int32 NewLevel) const;
+	void UnregisterUpgradableComponent(int32 ComponentId);
 
 protected:
+
+
+	// In your subsystem header:
+	UPROPERTY()
+	TArray<TWeakObjectPtr<UUpgradableComponent>> RegisteredComponents;
+
+	// Stack of free slots:
+	UPROPERTY()
+	TArray<int32> FreeIndices;
+
 	UPROPERTY()
 	TObjectPtr<UUpgradeJsonProvider> Provider;
 };

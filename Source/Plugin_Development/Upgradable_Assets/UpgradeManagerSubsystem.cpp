@@ -50,23 +50,57 @@ int32 UUpgradeManagerSubsystem::GetMaxLevel() const
 	return Provider->GetMaxLevel();
 }
 
-void UUpgradeManagerSubsystem::HandleUpgradeRequest(UUpgradableComponent* Component) const
+int32 UUpgradeManagerSubsystem::RegisterUpgradableComponent(UUpgradableComponent* Component)
 {
-	if (!Component || !Component->GetOwner()->HasAuthority()) return;
+	int32 Id;
+	if (FreeIndices.Num() > 0)
+	{
+		// Reuse the last hole
+		Id = FreeIndices.Pop(/*bAllowShrinking=*/false);
+		RegisteredComponents[Id] = Component;
+	}
+	else
+	{
+		// No holes—grow the array
+		Id = RegisteredComponents.Add(Component);
+	}
+	return Id;
+}
 
-	if (!CanUpgrade(Component)) return;
+void UUpgradeManagerSubsystem::UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel) const
+{
+	UUpgradableComponent* Comp = GetComponentById(ComponentId);
+	Comp->ApplyUpgradeInternal(NewLevel);
+}
 
-	const int32 NextLevel = Component->GetCurrentUpgradeLevel_Implementation() + 1;
-	const FUpgradeLevelData* LevelData = Provider->GetLevelData(NextLevel);
+void UUpgradeManagerSubsystem::UnregisterUpgradableComponent(const int32 ComponentId)
+{
+	if (RegisteredComponents.IsValidIndex(ComponentId))
+	{
+		RegisteredComponents[ComponentId].Reset();    // Clear the weak ptr
+		FreeIndices.Add(ComponentId);                // Remember this slot as a hole
+	}
+}
 
-	if (!LevelData) return;
+void UUpgradeManagerSubsystem::HandleUpgradeRequest(const int32 ComponentId, const int32 LevelIncrease) const
+{
+    const UUpgradableComponent* Comp = GetComponentById(ComponentId);
+    if (!Comp || !Comp->GetOwner()->HasAuthority()) return;
 
-	// APlayerState* PS = Cast<APawn>(Component->GetOwner())->GetPlayerState<APlayerState>();
-	// if (!PS || PS->GetScore() < LevelData->UpgradeCost) return;
-	//
-	//
-	// PS->SetScore(PS->GetScore() - LevelData->UpgradeCost);
-	Component->ApplyUpgradeInternal();
+    if (!CanUpgrade(Comp)) return;
+
+    const int32 NewLevel = Comp->GetCurrentUpgradeLevel_Implementation() + LevelIncrease;
+    const FUpgradeLevelData* LevelData = Provider->GetLevelData(NewLevel);
+
+    if (!LevelData) return;
+
+    // APlayerState* PS = Cast<APawn>(Comp->GetOwner())->GetPlayerState<APlayerState>();
+    // if (!PS || PS->GetScore() < LevelData->UpgradeCost) return;
+    //
+    //
+    // PS->SetScore(PS->GetScore() - LevelData->UpgradeCost);
+
+	UpdateUpgradeLevel(ComponentId, NewLevel);
 }
 
 void UUpgradeManagerSubsystem::LoadJsonFromFile()
@@ -83,4 +117,11 @@ void UUpgradeManagerSubsystem::LoadJsonFromFile()
 	{
 		UE_LOG(LogTemp, Error, TEXT("Failed to load UpgradeLevels.json from %s"), *FilePath);
 	}
+}
+
+UUpgradableComponent* UUpgradeManagerSubsystem::GetComponentById(const int32 Id) const
+{
+	return (RegisteredComponents.IsValidIndex(Id)
+			? RegisteredComponents[Id].Get()
+			: nullptr);
 }
