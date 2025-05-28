@@ -40,8 +40,8 @@ void UUpgradeJsonProvider::InitializeFromJson(const FString& Json)
 					{
 						EResourceType ResourceType = EResourceType::None;
 						int32 Amount;
-
 						FString TypeString;
+												
 						if ((*ResourceObj)->TryGetStringField(TEXT("type"), TypeString))
 						{
 							UEnum* EnumPtr = StaticEnum<EResourceType>();
@@ -54,6 +54,7 @@ void UUpgradeJsonProvider::InitializeFromJson(const FString& Json)
 									UE_LOG(LogTemp, Log, TEXT("Successfully converted '%s' to enum value: %s"), 
 										*TypeString, 
 										*EnumPtr->GetNameStringByValue(static_cast<int64>(ResourceType)));
+										Data.ResourceTypes.Add(ResourceType);
 								}
 								else
 								{
@@ -70,12 +71,29 @@ void UUpgradeJsonProvider::InitializeFromJson(const FString& Json)
 						{
 							UE_LOG(LogTemp, Warning, TEXT("Failed to get 'type' field from JSON"));
 						}
-						(*ResourceObj)->TryGetNumberField(TEXT("amount"), Amount);
-						Data.ResourceTypes.Add(ResourceType);
-						Data.UpgradeCosts.Add(Amount);
+						if((*ResourceObj)->TryGetNumberField(TEXT("amount"), Amount))
+						{
+							Data.UpgradeCosts.Add(Amount);
+						}
+						else
+						{
+							UE_LOG(LogTemp, Warning, TEXT("No 'amount' value found in level data"));
+						}
 					}
 				}
 			}
+			
+			// Add parsing for single upgradeSeconds value
+			int32 UpgradeSeconds;
+			if ((*LevelObj)->TryGetNumberField(TEXT("upgradeSeconds"), UpgradeSeconds))
+			{
+				Data.UpgradeSeconds.Add(UpgradeSeconds);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("No 'upgradeSeconds' value found in level data"));
+			}
+			
 			LevelDataArray.Add(Data);
 		}
 	}
