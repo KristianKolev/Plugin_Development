@@ -26,8 +26,8 @@ public:
 	FString JsonDirectory = TEXT("Data/Upgrade");
 
 	// DataTable assets for definitions (can list multiple)
-	UPROPERTY(EditAnywhere, config, Category="Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::DataTable"))
-	TArray<FSoftObjectPath> CatalogDataTables;
+	UPROPERTY(EditAnywhere, config, Category="Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::DataTable", AllowedClasses="DataTable"))
+	TArray<TSoftObjectPtr<UDataTable>> CatalogDataTables;
 
 	// Folder path for DataAssets
 	UPROPERTY(EditAnywhere, config, Category="Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::DataAssetFolder"))
