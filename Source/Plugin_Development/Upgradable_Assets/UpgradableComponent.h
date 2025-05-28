@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Upgradable.h"
+#include "UpgradeLevelData.h"
 #include "UpgradableComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnLevelChangedDelegate, int32, OldLevel, int32, NewLevel);
@@ -21,28 +22,51 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Upgradable")
 	FOnLevelChangedDelegate OnLevelChanged;
 
+	// IUpgradableInterface 
 	virtual int32 GetCurrentUpgradeLevel_Implementation() const override { return CurrentLevel; }
 
-	virtual void RequestUpgrade_Implementation() override;
+	virtual EUpgradableCategory GetUpgradableCategory_Implementation() const override { return Category; }
+
+	virtual EUpgradableAspect GetUpgradableAspect_Implementation() const override { return Aspect; }
+
+	virtual int32 GetComponentId_Implementation() const override { return UpgradableID; }
+
+	virtual void RequestUpgrade_Implementation(int32 LevelIncrease) override;
 
 	virtual bool CanUpgrade_Implementation() const override;
-	
-	void ApplyUpgradeInternal();
 
-private:
+	// IUpgradableInterface 
+	
+	void ApplyUpgradeInternal(int32 NewLevel);
+
+protected:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level Data")
+	FUpgradeLevelDataVisuals LevelDataVisuals;
+	
+	UPROPERTY()
+	int32 UpgradableID = -1;
+	
+	UPROPERTY(ReplicatedUsing=OnRep_CurrentLevel)
+	int32 CurrentLevel = 0;
+
+	UPROPERTY(Blueprintable, BlueprintReadWrite, EditAnywhere, Category = "Upgradable")
+	EUpgradableCategory Category = EUpgradableCategory::None;
+	
+	UPROPERTY(Blueprintable, BlueprintReadWrite, EditAnywhere, Category = "Upgradable")
+	EUpgradableAspect Aspect = EUpgradableAspect::Level;
+
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	UFUNCTION()
+	void OnRep_CurrentLevel(int32 OldLevel);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
-	UFUNCTION()
-	void OnRep_CurrentLevel();
-
-	UPROPERTY(ReplicatedUsing=OnRep_CurrentLevel)
-	int32 CurrentLevel = 0;
-	
 	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_RequestUpgrade();
-	void Server_RequestUpgrade_Implementation();
-	bool Server_RequestUpgrade_Validate();
+	void Server_RequestUpgrade(int32 LevelIncrease);
+	void Server_RequestUpgrade_Implementation(int32 LevelIncrease);
+	bool Server_RequestUpgrade_Validate(int32 LevelIncrease);
 
-};	
+};

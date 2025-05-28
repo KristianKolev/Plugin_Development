@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
+#include "UpgradeLevelData.h"
 #include "Upgradable.generated.h"
 
 // This class does not need to be modified.
@@ -25,6 +26,15 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Upgradable")
 	bool CanUpgrade() const;
 
-	UFUNCTION(BlueprintNativeEvent,BlueprintCallable, Category = "Upgradable")
-	void RequestUpgrade();
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Upgradable")
+	void RequestUpgrade(int32 LevelIncrease);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Upgradable")
+	EUpgradableCategory GetUpgradableCategory() const;
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Upgradable")
+	EUpgradableAspect GetUpgradableAspect() const;
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Upgradable")
+	int32 GetComponentId() const;
 };
