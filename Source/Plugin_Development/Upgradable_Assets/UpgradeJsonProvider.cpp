@@ -38,9 +38,38 @@ void UUpgradeJsonProvider::InitializeFromJson(const FString& Json)
 					const TSharedPtr<FJsonObject>* ResourceObj;
 					if (ResourceVal->TryGetObject(ResourceObj))
 					{
-						FResourceType ResourceType;
+						EResourceType ResourceType = EResourceType::None;
 						int32 Amount;
-						(*ResourceObj)->TryGetStringField(TEXT("type"), ResourceType.Name);
+
+						FString TypeString;
+						if ((*ResourceObj)->TryGetStringField(TEXT("type"), TypeString))
+						{
+							UEnum* EnumPtr = StaticEnum<EResourceType>();
+							if (EnumPtr)
+							{
+								int64 EnumValue = EnumPtr->GetValueByName(FName(*TypeString));
+								if (EnumValue != INDEX_NONE)
+								{
+									ResourceType = static_cast<EResourceType>(EnumValue);
+									UE_LOG(LogTemp, Log, TEXT("Successfully converted '%s' to enum value: %s"), 
+										*TypeString, 
+										*EnumPtr->GetNameStringByValue(static_cast<int64>(ResourceType)));
+								}
+								else
+								{
+									UE_LOG(LogTemp, Warning, TEXT("Failed to convert '%s' to EResourceType enum. Value not found in enum."), 
+										*TypeString);
+								}
+							}
+							else
+							{
+								UE_LOG(LogTemp, Error, TEXT("Failed to get EResourceType enum definition"));
+							}
+						}
+						else
+						{
+							UE_LOG(LogTemp, Warning, TEXT("Failed to get 'type' field from JSON"));
+						}
 						(*ResourceObj)->TryGetNumberField(TEXT("amount"), Amount);
 						Data.ResourceTypes.Add(ResourceType);
 						Data.UpgradeCosts.Add(Amount);
