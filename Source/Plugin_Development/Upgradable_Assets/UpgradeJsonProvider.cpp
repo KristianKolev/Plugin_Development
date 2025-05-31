@@ -2,103 +2,109 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
-void UUpgradeJsonProvider::InitializeFromJson(const FString& Json)
+void UUpgradeJsonProvider::InitializeFromJson(const FString& FilePath, TMap<FName, TArray<FUpgradeLevelData>>& InUpgradeCatalog, TArray<FName>& InResourceTypes)
 {
 	
-	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
-	TSharedPtr<FJsonObject> RootObject;
-
-	if (!FJsonSerializer::Deserialize(Reader, RootObject) || !RootObject.IsValid())
-	{
-		UE_LOG(LogTemp, Error, TEXT("Failed to parse upgrade JSON."));
-		return;
-	}
-
-	const TArray<TSharedPtr<FJsonValue>>* Levels;
-	if (!RootObject->TryGetArrayField(TEXT("levels"), Levels))
-	{
-		UE_LOG(LogTemp, Error, TEXT("JSON does not contain a 'levels' array."));
-		return;
-	}
-
-	LevelDataArray.Empty();
-
-	for (const TSharedPtr<FJsonValue>& Entry : *Levels)
-	{
-		const TSharedPtr<FJsonObject>* LevelObj;
-		if (Entry->TryGetObject(LevelObj))
+		FString JsonString;
+		if (!FFileHelper::LoadFileToString(JsonString, *FilePath))
 		{
-			FUpgradeLevelData Data;
-			
-			const TArray<TSharedPtr<FJsonValue>>* ResourceArray;
-			if ((*LevelObj)->TryGetArrayField(TEXT("resources"), ResourceArray))
-			{
-				for (const TSharedPtr<FJsonValue>& ResourceVal : *ResourceArray)
-				{
-					const TSharedPtr<FJsonObject>* ResourceObj;
-					if (ResourceVal->TryGetObject(ResourceObj))
-					{
-						EResourceType ResourceType = EResourceType::None;
-						int32 Amount;
-						FString TypeString;
-												
-						if ((*ResourceObj)->TryGetStringField(TEXT("type"), TypeString))
-						{
-							UEnum* EnumPtr = StaticEnum<EResourceType>();
-							if (EnumPtr)
-							{
-								int64 EnumValue = EnumPtr->GetValueByName(FName(*TypeString));
-								if (EnumValue != INDEX_NONE)
-								{
-									ResourceType = static_cast<EResourceType>(EnumValue);
-									UE_LOG(LogTemp, Log, TEXT("Successfully converted '%s' to enum value: %s"), 
-										*TypeString, 
-										*EnumPtr->GetNameStringByValue(static_cast<int64>(ResourceType)));
-										Data.ResourceTypes.Add(ResourceType);
-								}
-								else
-								{
-									UE_LOG(LogTemp, Warning, TEXT("Failed to convert '%s' to EResourceType enum. Value not found in enum."), 
-										*TypeString);
-								}
-							}
-							else
-							{
-								UE_LOG(LogTemp, Error, TEXT("Failed to get EResourceType enum definition"));
-							}
-						}
-						else
-						{
-							UE_LOG(LogTemp, Warning, TEXT("Failed to get 'type' field from JSON"));
-						}
-						if((*ResourceObj)->TryGetNumberField(TEXT("amount"), Amount))
-						{
-							Data.UpgradeCosts.Add(Amount);
-						}
-						else
-						{
-							UE_LOG(LogTemp, Warning, TEXT("No 'amount' value found in level data"));
-						}
-					}
-				}
-			}
-			
-			// Add parsing for single upgradeSeconds value
-			int32 UpgradeSeconds;
-			if ((*LevelObj)->TryGetNumberField(TEXT("upgradeSeconds"), UpgradeSeconds))
-			{
-				Data.UpgradeSeconds = UpgradeSeconds;
-			}
-			else
-			{
-				UE_LOG(LogTemp, Warning, TEXT("No 'upgradeSeconds' value found in level data"));
-			}
-			
-			LevelDataArray.Add(Data);
+			UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_01] Failed to read JSON file: %s"), *FilePath);
+			return;
 		}
-	}
+		TSharedPtr<FJsonObject> Root;
+		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
+		if (!FJsonSerializer::Deserialize(Reader, Root) || !Root.IsValid())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_02] Invalid JSON in file: %s"), *FilePath);
+			return;
+		}
+		// Determine UpgradePathId from JSON field or fallback to filename
+		FString PathIdStr;
+		FName PathId;
+		if (Root->TryGetStringField(TEXT("UpgradePath"), PathIdStr) && !PathIdStr.IsEmpty())
+		{
+			PathId = FName(*PathIdStr);
+			UE_LOG(LogTemp, Log, TEXT("[UPGRADEJSON_INFO_01] Using UpgradePath '%s' from JSON"), *PathIdStr);
+		}
+		else
+		{
+			PathId = FName(*FPaths::GetBaseFilename(FilePath));
+			UE_LOG(LogTemp, Verbose, TEXT("[UPGRADEJSON_INFO_02] Using filename '%s' as UpgradePathId for file: %s"), *PathId.ToString(), *FilePath);
+		}
+		TArray<FUpgradeLevelData>& Arr = InUpgradeCatalog.FindOrAdd(PathId);
 
-	UE_LOG(LogTemp, Log, TEXT("Parsed %d upgrade levels."), LevelDataArray.Num());
+		// Extract levels array
+		const TArray<TSharedPtr<FJsonValue>>* Levels;
+		if (!Root->TryGetArrayField(TEXT("levels"), Levels))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_03] JSON file %s missing 'levels' array."), *FilePath);
+			return;
+		}
+
+		for (int32 lvlIndex = 0; lvlIndex < Levels->Num(); ++lvlIndex)
+		{
+			const TSharedPtr<FJsonValue>& Val = (*Levels)[lvlIndex];
+			const TSharedPtr<FJsonObject>* Obj;
+			if (!Val->TryGetObject(Obj))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_04] Level %d in %s is not an object."), lvlIndex, *FilePath);
+				continue;
+			}
+
+			FUpgradeLevelData Data;
+
+			// Parse resources array
+			const TArray<TSharedPtr<FJsonValue>>* Resources;
+			if (!(*Obj)->TryGetArrayField(TEXT("resources"), Resources))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_05] Level %d in %s missing 'resources' array."), lvlIndex, *FilePath);
+				continue;
+			}
+
+			// Temporary storage
+			TArray<int32> TypeIndices;
+			TArray<int32> CostsArr;
+
+			for (int32 resIndex = 0; resIndex < Resources->Num(); ++resIndex)
+			{
+				const TSharedPtr<FJsonObject>* RObj;
+				if (!(*Resources)[resIndex]->TryGetObject(RObj))
+				{
+					UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_06] Resource entry %d in level %d of %s is not an object."), resIndex, lvlIndex, *FilePath);
+					continue;
+				}
+				// Type string
+				FString TypeStr = (*RObj)->GetStringField(TEXT("type"));
+				FName TypeName(*TypeStr);
+				int32 TypeIdx = AddRequiredResourceType(TypeName, InResourceTypes);
+				TypeIndices.Add(TypeIdx);
+
+				// Amount
+				int32 Amount = (*RObj)->GetIntegerField(TEXT("amount"));
+				CostsArr.Add(Amount);
+			}
+
+			if (TypeIndices.Num() == 0)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_07] No valid resources for level %d in %s"), lvlIndex, *FilePath);
+				continue;
+			}
+			Data.ResourceTypeIndices = MoveTemp(TypeIndices);
+			Data.UpgradeCosts		= MoveTemp(CostsArr);
+
+			// Parse upgradeSeconds (single value)
+			int32 SecondsVal = 0;
+			if (!(*Obj)->TryGetNumberField(TEXT("upgradeSeconds"), SecondsVal))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_08] Level %d in %s missing or invalid 'upgradeSeconds' field."), lvlIndex, *FilePath);
+			}
+			Data.UpgradeSeconds = SecondsVal;
+
+			Arr.Add(Data);
+			UE_LOG(LogTemp, Log, TEXT("[UPGRADEJSON_INFO_03] Successfully parsed level %d data"), lvlIndex);
+			LevelDataArray = Arr;
+		}
+	UE_LOG(LogTemp, Log, TEXT("[UPGRADEJSON_INFO_04] Parsed %d upgrade levels."), LevelDataArray.Num());
 
 }
 
@@ -110,4 +116,16 @@ const FUpgradeLevelData* UUpgradeJsonProvider::GetLevelData(int32 Level) const
 int32 UUpgradeJsonProvider::GetMaxLevel() const
 {
 	return LevelDataArray.Num();
+}
+
+int32 UUpgradeJsonProvider::AddRequiredResourceType(FName& ResourceType, TArray<FName>& ResourceTypes)
+{
+    int32 FoundIndex = ResourceTypes.IndexOfByKey(ResourceType);
+    if (FoundIndex != INDEX_NONE)
+    {
+        return FoundIndex;
+    }
+    int32 NewIndex = ResourceTypes.Num();
+    ResourceTypes.Add(ResourceType);
+    return NewIndex;
 }

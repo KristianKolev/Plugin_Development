@@ -2,8 +2,10 @@
 #include "UpgradeManagerSubsystem.h"
 #include "UpgradableComponent.h"
 #include "UpgradeJsonProvider.h"
+#include "UpgradeSettings.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/PlayerState.h"
+#include "Windows/WindowsApplication.h"
 
 
 UUpgradeManagerSubsystem::UUpgradeManagerSubsystem()
@@ -26,7 +28,7 @@ void UUpgradeManagerSubsystem::Deinitialize()
 void UUpgradeManagerSubsystem::InitializeProviderFromJson(const FString& Json)
 {
 	Provider = NewObject<UUpgradeJsonProvider>(this);
-	Provider->InitializeFromJson(Json);
+	Provider->InitializeFromJson(Json, UpgradeCatalog, ResourceTypes);
 }
 
 bool UUpgradeManagerSubsystem::CanUpgrade(const UUpgradableComponent* Component) const
@@ -56,6 +58,23 @@ int32 UUpgradeManagerSubsystem::GetMaxLevel() const
 	return Provider->GetMaxLevel();
 }
 
+int32 UUpgradeManagerSubsystem::GetResourceTypeIndex(const FName& TypeName)
+{
+	int32 FoundIndex = ResourceTypes.IndexOfByKey(TypeName);
+	if (FoundIndex != INDEX_NONE)
+	{
+		return FoundIndex;
+	}
+	return -1;
+}
+
+FName UUpgradeManagerSubsystem::GetResourceTypeName(const int32 Index) const
+{
+	return ResourceTypes.IsValidIndex(Index)
+			? ResourceTypes[Index]
+			: NAME_None;
+}
+
 TArray<int32> UUpgradeManagerSubsystem::GetNextLevelUpgradeCosts(const UUpgradableComponent* Component) const
 {
 	TArray<int32> Costs;
@@ -64,6 +83,8 @@ TArray<int32> UUpgradeManagerSubsystem::GetNextLevelUpgradeCosts(const UUpgradab
 	{
 		Costs = Provider->GetLevelData(NextLevel)->UpgradeCosts;
 	}
+	const TArray<FUpgradeLevelData>* Upgrades = UpgradeCatalog.Find("UpgradeLevels");
+	Costs = Upgrades->IsValidIndex(NextLevel) ? (*Upgrades)[NextLevel].UpgradeCosts : Costs;
 	return Costs;
 }
 
@@ -79,6 +100,8 @@ int32 UUpgradeManagerSubsystem::GetNextLevelUpgradeTime(const int32 ComponentId)
 	{
 		SecondsForUpgrade = Provider->GetLevelData(NextLevel)->UpgradeSeconds;
 	}
+	const TArray<FUpgradeLevelData>* Upgrades = UpgradeCatalog.Find("UpgradeLevels");
+	SecondsForUpgrade = Upgrades->IsValidIndex(NextLevel) ? (*Upgrades)[NextLevel].UpgradeSeconds : SecondsForUpgrade;
 	return SecondsForUpgrade;
 }
 
@@ -115,15 +138,21 @@ void UUpgradeManagerSubsystem::UnregisterUpgradableComponent(const int32 Compone
 	}
 }
 
+void UUpgradeManagerSubsystem::LoadCatalog()
+{
+}
+
+
 void UUpgradeManagerSubsystem::HandleUpgradeRequest(const int32 ComponentId, const int32 LevelIncrease) const
 {
     const UUpgradableComponent* Comp = GetComponentById(ComponentId);
     if (!Comp || !Comp->GetOwner()->HasAuthority()) return;
 
     if (!CanUpgrade(Comp)) return;
-
+	const TArray<FUpgradeLevelData>* Upgrades = UpgradeCatalog.Find("UpgradeLevels");
     const int32 NewLevel = Comp->GetCurrentUpgradeLevel_Implementation() + LevelIncrease;
     const FUpgradeLevelData* LevelData = Provider->GetLevelData(NewLevel);
+	LevelData = &(*Upgrades)[NewLevel];
 
     if (!LevelData) return;
 
@@ -138,9 +167,20 @@ void UUpgradeManagerSubsystem::HandleUpgradeRequest(const int32 ComponentId, con
 
 void UUpgradeManagerSubsystem::LoadJsonFromFile()
 {
-	const FString FilePath = FPaths::ProjectContentDir() / TEXT("Data/UpgradeLevels.json");
-	FString JsonString;
 
+    const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
+    const FString Dir = FPaths::ProjectContentDir() / Settings->JsonDirectory;
+    TArray<FString> Files;
+    IFileManager::Get().FindFilesRecursive(Files, *Dir, TEXT("*.json"), true, false);
+    UpgradeCatalog.Empty();
+
+	for (const FString& FilePath : Files)
+    {
+	    InitializeProviderFromJson(FilePath);
+    }
+	/*const FString FilePath = FPaths::ProjectContentDir() / TEXT("Data/UpgradeLevels.json");
+	FString JsonString;
+	
 	if (FPaths::FileExists(FilePath) && FFileHelper::LoadFileToString(JsonString, *FilePath))
 	{
 		InitializeProviderFromJson(JsonString);
@@ -149,7 +189,7 @@ void UUpgradeManagerSubsystem::LoadJsonFromFile()
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("Failed to load UpgradeLevels.json from %s"), *FilePath);
-	}
+	}*/
 }
 
 UUpgradableComponent* UUpgradeManagerSubsystem::GetComponentById(const int32 Id) const

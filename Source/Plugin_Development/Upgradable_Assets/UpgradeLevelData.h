@@ -37,13 +37,20 @@ struct PLUGIN_DEVELOPMENT_API FUpgradeLevelData
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TArray<EResourceType> ResourceTypes;
+	TArray<int32> ResourceTypeIndices;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<int32> UpgradeCosts;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 UpgradeSeconds = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	bool bUpgrading = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	bool bUpgradeLocked = false;
+	
 };
 
 USTRUCT(BlueprintType)

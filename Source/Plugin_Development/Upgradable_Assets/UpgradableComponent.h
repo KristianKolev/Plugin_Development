@@ -41,8 +41,12 @@ public:
 
 protected:
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level Data")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LevelUp Visuals")
 	FUpgradeLevelDataVisuals LevelDataVisuals;
+
+	// Unique identifier for this upgrade path
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Upgradable")
+	FName UpgradePathId;
 	
 	UPROPERTY()
 	int32 UpgradableID = -1;
