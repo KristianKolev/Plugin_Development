@@ -10,7 +10,7 @@ UUpgradableComponent::UUpgradableComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicatedByDefault(true);
-	CurrentLevel = 0;
+	LocalLevel = 0;
 }
 
 void UUpgradableComponent::BeginPlay()
@@ -38,19 +38,20 @@ void UUpgradableComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void UUpgradableComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(UUpgradableComponent, CurrentLevel);
-}
-
-void UUpgradableComponent::OnRep_CurrentLevel(int32 OldLevel)
-{
-    OnLevelChanged.Broadcast(OldLevel, CurrentLevel);
-    // UI feedback, VFX, etc.
+	DOREPLIFETIME(UUpgradableComponent, LocalLevel);
 }
 
 bool UUpgradableComponent::CanUpgrade_Implementation() const
 {
 	UUpgradeManagerSubsystem* Subsystem = GetWorld()->GetSubsystem<UUpgradeManagerSubsystem>();
-	return Subsystem && Subsystem->CanUpgrade(this);
+	return Subsystem && Subsystem->CanUpgrade(GetComponentId());
+}
+
+void UUpgradableComponent::Client_SetLevel_Implementation(int32 NewLevel)
+{
+	const int32 OldLevel = LocalLevel;
+	LocalLevel = NewLevel;
+	OnLevelChanged.Broadcast(OldLevel, LocalLevel);
 }
 
 void UUpgradableComponent::RequestUpgrade_Implementation(int32 LevelIncrease)
@@ -74,11 +75,3 @@ void UUpgradableComponent::Server_RequestUpgrade_Implementation(int32 LevelIncre
 		Subsystem->HandleUpgradeRequest(UpgradableID, LevelIncrease);
 	}
 }
-
-void UUpgradableComponent::ApplyUpgradeInternal(int32 NewLevel)
-{
-    const int32 OldLevel = CurrentLevel;
-    CurrentLevel = NewLevel;
-    OnRep_CurrentLevel(OldLevel);
-}
-// Called when the game starts

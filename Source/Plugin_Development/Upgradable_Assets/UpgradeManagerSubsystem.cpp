@@ -31,31 +31,32 @@ void UUpgradeManagerSubsystem::InitializeProviderFromJson(const FString& Json)
 	Provider->InitializeFromJson(Json, UpgradeCatalog, ResourceTypes);
 }
 
-bool UUpgradeManagerSubsystem::CanUpgrade(const UUpgradableComponent* Component) const
+bool UUpgradeManagerSubsystem::CanUpgrade(const int32 ComponentId) const
 {
-	return Provider && Component->GetCurrentUpgradeLevel_Implementation() < Provider->GetMaxLevel() - 1;
+	return GetCurrentLevel(ComponentId) < GetMaxLevel(ComponentId);
 }
 
 int32 UUpgradeManagerSubsystem::GetCurrentLevel(const int32 ComponentId) const
 {
-	if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
+	if (ComponentLevels.IsValidIndex(ComponentId) && ComponentLevels[ComponentId] != -1)
 	{
-		return Comp->GetCurrentUpgradeLevel_Implementation();
+		return ComponentLevels[ComponentId];
 	}
 	return -1;
 }
 int32 UUpgradeManagerSubsystem::GetNextLevel(const int32 ComponentId) const
 {
-	if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
+	if (ComponentLevels.IsValidIndex(ComponentId) && ComponentLevels[ComponentId] != -1)
 	{
-		return Comp->GetCurrentUpgradeLevel_Implementation() + 1;
+		
+		return ComponentLevels[ComponentId] + 1;
 	}
 	return -1;
 }
 
-int32 UUpgradeManagerSubsystem::GetMaxLevel() const
+int32 UUpgradeManagerSubsystem::GetMaxLevel(const int32 ComponentId) const
 {
-	return Provider->GetMaxLevel();
+	return GetUpgradeDefinitions(ComponentId)->Num()-1;
 }
 
 int32 UUpgradeManagerSubsystem::GetResourceTypeIndex(const FName& TypeName)
@@ -75,33 +76,26 @@ FName UUpgradeManagerSubsystem::GetResourceTypeName(const int32 Index) const
 			: NAME_None;
 }
 
-TArray<int32> UUpgradeManagerSubsystem::GetNextLevelUpgradeCosts(const UUpgradableComponent* Component) const
+void UUpgradeManagerSubsystem::GetNextLevelUpgradeCosts(const int32 ComponentId, TArray<int32>& ResourceCosts, TArray<FName>& Resources) const
 {
-	TArray<int32> Costs;
-	int32 NextLevel = Component->GetCurrentUpgradeLevel_Implementation() + 1;
-	if (Provider && Provider->GetLevelData(NextLevel))
+	ResourceCosts.Init(-1,2);
+	if (const FUpgradeLevelData* UpgradeDefinition = GetUpgradeDefinitionForLevel(ComponentId, GetNextLevel(ComponentId)))
 	{
-		Costs = Provider->GetLevelData(NextLevel)->UpgradeCosts;
+		ResourceCosts = UpgradeDefinition->UpgradeCosts;
+		for (int32 ResourceIndex : UpgradeDefinition->ResourceTypeIndices)
+		{
+			Resources.Add(GetResourceTypeName(ResourceIndex));
+		}
 	}
-	const TArray<FUpgradeLevelData>* Upgrades = UpgradeCatalog.Find("UpgradeLevels");
-	Costs = Upgrades->IsValidIndex(NextLevel) ? (*Upgrades)[NextLevel].UpgradeCosts : Costs;
-	return Costs;
 }
 
 int32 UUpgradeManagerSubsystem::GetNextLevelUpgradeTime(const int32 ComponentId) const
 {
-	int32 NextLevel = -1;
 	int32 SecondsForUpgrade = -1;
-	if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
+	if (const FUpgradeLevelData* UpgradeDefinition = GetUpgradeDefinitionForLevel(ComponentId, GetNextLevel(ComponentId)))
 	{
-		NextLevel = GetNextLevel(ComponentId);
+		SecondsForUpgrade = UpgradeDefinition->UpgradeSeconds;
 	}
-	if (Provider && Provider->GetLevelData(NextLevel))
-	{
-		SecondsForUpgrade = Provider->GetLevelData(NextLevel)->UpgradeSeconds;
-	}
-	const TArray<FUpgradeLevelData>* Upgrades = UpgradeCatalog.Find("UpgradeLevels");
-	SecondsForUpgrade = Upgrades->IsValidIndex(NextLevel) ? (*Upgrades)[NextLevel].UpgradeSeconds : SecondsForUpgrade;
 	return SecondsForUpgrade;
 }
 
@@ -114,19 +108,25 @@ int32 UUpgradeManagerSubsystem::RegisterUpgradableComponent(UUpgradableComponent
 		// Reuse the last hole
 		Id = FreeIndices.Pop(/*bAllowShrinking=*/false);
 		RegisteredComponents[Id] = Component;
+		ComponentLevels[Id] = Component->InitialLevel;
 	}
 	else
 	{
 		// No holes—grow the array
 		Id = RegisteredComponents.Add(Component);
+		ComponentLevels.Add(Component->InitialLevel);
 	}
+
 	return Id;
 }
 
-void UUpgradeManagerSubsystem::UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel) const
+void UUpgradeManagerSubsystem::UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel)
 {
-	UUpgradableComponent* Comp = GetComponentById(ComponentId);
-	Comp->ApplyUpgradeInternal(NewLevel);
+	if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
+	{
+		ComponentLevels[ComponentId] = NewLevel;
+		Comp->Client_SetLevel(NewLevel);
+	}
 }
 
 void UUpgradeManagerSubsystem::UnregisterUpgradableComponent(const int32 ComponentId)
@@ -135,6 +135,7 @@ void UUpgradeManagerSubsystem::UnregisterUpgradableComponent(const int32 Compone
 	{
 		RegisteredComponents[ComponentId].Reset();    // Clear the weak ptr
 		FreeIndices.Add(ComponentId);                // Remember this slot as a hole
+		ComponentLevels[ComponentId] = -1;           // Mark as unused 
 	}
 }
 
@@ -142,27 +143,50 @@ void UUpgradeManagerSubsystem::LoadCatalog()
 {
 }
 
-
-void UUpgradeManagerSubsystem::HandleUpgradeRequest(const int32 ComponentId, const int32 LevelIncrease) const
+const TArray<FUpgradeLevelData>* UUpgradeManagerSubsystem::GetUpgradeDefinitions(FName UpgradePathId) const
 {
-    const UUpgradableComponent* Comp = GetComponentById(ComponentId);
-    if (!Comp || !Comp->GetOwner()->HasAuthority()) return;
+	return UpgradeCatalog.Find(UpgradePathId);
+}
 
-    if (!CanUpgrade(Comp)) return;
-	const TArray<FUpgradeLevelData>* Upgrades = UpgradeCatalog.Find("UpgradeLevels");
-    const int32 NewLevel = Comp->GetCurrentUpgradeLevel_Implementation() + LevelIncrease;
-    const FUpgradeLevelData* LevelData = Provider->GetLevelData(NewLevel);
-	LevelData = &(*Upgrades)[NewLevel];
+const TArray<FUpgradeLevelData>* UUpgradeManagerSubsystem::GetUpgradeDefinitions(int32 ComponentId) const
+{
+	const UUpgradableComponent* Comp = GetComponentById(ComponentId);
+	if (!Comp) return nullptr;
+	return UpgradeCatalog.Find(Comp->UpgradePathId);
+}
 
-    if (!LevelData) return;
+const FUpgradeLevelData* UUpgradeManagerSubsystem::GetUpgradeDefinitionForLevel(int32 ComponentId, int32 Level) const
+{
+	const TArray<FUpgradeLevelData>* UpgradeDefinitions = GetUpgradeDefinitions(ComponentId);
+	if (!UpgradeDefinitions || Level < 0 || Level > UpgradeDefinitions->Num()-1 ) return nullptr;
+	return &(*UpgradeDefinitions)[Level];
+}
 
-    // APlayerState* PS = Cast<APawn>(Comp->GetOwner())->GetPlayerState<APlayerState>();
-    // if (!PS || PS->GetScore() < LevelData->UpgradeCost) return;
-    //
-    //
-    // PS->SetScore(PS->GetScore() - LevelData->UpgradeCost);
+
+bool UUpgradeManagerSubsystem::HandleUpgradeRequest(const int32 ComponentId, const int32 LevelIncrease)
+{
+	const UUpgradableComponent* Comp = GetComponentById(ComponentId);
+	if (!Comp || !Comp->GetOwner()->HasAuthority()) return false;
+
+	const int32 CurrentLevel = ComponentLevels[ComponentId];
+	if (!ComponentLevels.IsValidIndex(ComponentId) || ComponentLevels[ComponentId] == -1) return false;	  // not registered
+	const TArray<FUpgradeLevelData>* UpgradeDefinitions = GetUpgradeDefinitions(ComponentId);
+	if (!UpgradeDefinitions || CurrentLevel >= UpgradeDefinitions->Num()-1) return false;
+	
+	if (!CanUpgrade(ComponentId)) return false;
+	const int32 NewLevel = GetCurrentLevel(ComponentId) + LevelIncrease;   
+	const FUpgradeLevelData* LevelData = &(*UpgradeDefinitions)[NewLevel];
+
+	if (!LevelData) return false;
+
+	// APlayerState* PS = Cast<APawn>(Comp->GetOwner())->GetPlayerState<APlayerState>();
+	// if (!PS || PS->GetScore() < LevelData->UpgradeCost) return false;
+	//
+	//
+	// PS->SetScore(PS->GetScore() - LevelData->UpgradeCost);
 
 	UpdateUpgradeLevel(ComponentId, NewLevel);
+	return true;
 }
 
 void UUpgradeManagerSubsystem::LoadJsonFromFile()
@@ -198,5 +222,3 @@ UUpgradableComponent* UUpgradeManagerSubsystem::GetComponentById(const int32 Id)
 			? RegisteredComponents[Id].Get()
 			: nullptr);
 }
-
-

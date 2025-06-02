@@ -22,8 +22,15 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Upgradable")
 	FOnLevelChangedDelegate OnLevelChanged;
 
+	// Unique identifier for this upgrade path
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Upgradable")
+	FName UpgradePathId;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Upgradable")
+	int32 InitialLevel = 0;
+
 	// IUpgradableInterface 
-	virtual int32 GetCurrentUpgradeLevel_Implementation() const override { return CurrentLevel; }
+	virtual int32 GetCurrentUpgradeLevel_Implementation() const override { return LocalLevel; }
 
 	virtual EUpgradableCategory GetUpgradableCategory_Implementation() const override { return Category; }
 
@@ -36,23 +43,22 @@ public:
 	virtual bool CanUpgrade_Implementation() const override;
 
 	// IUpgradableInterface 
-	
-	void ApplyUpgradeInternal(int32 NewLevel);
+
+	UFUNCTION(Client, Reliable)
+	void Client_SetLevel(int32 NewLevel);
+	void Client_SetLevel_Implementation(int32 NewLevel);
+
 
 protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LevelUp Visuals")
 	FUpgradeLevelDataVisuals LevelDataVisuals;
-
-	// Unique identifier for this upgrade path
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Upgradable")
-	FName UpgradePathId;
 	
 	UPROPERTY()
 	int32 UpgradableID = -1;
 	
-	UPROPERTY(ReplicatedUsing=OnRep_CurrentLevel)
-	int32 CurrentLevel = 0;
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Upgradable")
+	int32 LocalLevel = 0;
 
 	UPROPERTY(Blueprintable, BlueprintReadWrite, EditAnywhere, Category = "Upgradable")
 	EUpgradableCategory Category = EUpgradableCategory::None;
@@ -62,9 +68,6 @@ protected:
 
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
-	UFUNCTION()
-	void OnRep_CurrentLevel(int32 OldLevel);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	

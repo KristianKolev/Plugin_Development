@@ -21,10 +21,10 @@ class PLUGIN_DEVELOPMENT_API UUpgradeManagerSubsystem : public UWorldSubsystem
 	
 public:
 	void InitializeProviderFromJson(const FString& Json);
-	void HandleUpgradeRequest(int32 ComponentId, int32 LevelIncrease) const;
+	bool HandleUpgradeRequest(int32 ComponentId, int32 LevelIncrease);
 	void LoadJsonFromFile();
 
-	bool CanUpgrade(const UUpgradableComponent* Component) const;
+	bool CanUpgrade(int32 ComponentId) const;
 	
 	UFUNCTION(BlueprintCallable, Category = "Upgrade|Status")
 	UUpgradableComponent* GetComponentById(int32 Id) const;
@@ -36,16 +36,16 @@ public:
 	int32 GetNextLevel(const int32 ComponentId) const ; 
 
 	UFUNCTION(BlueprintCallable, Category = "Upgrade|Status")
-	TArray<int32> GetNextLevelUpgradeCosts(const UUpgradableComponent* Component) const ;
+	void GetNextLevelUpgradeCosts(int32 ComponentId, TArray<int32>& ResourceCosts, TArray<FName>& Resources) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Upgrade|Status")
 	int32 GetNextLevelUpgradeTime(const int32 ComponentId) const ;
 
 	UFUNCTION(BlueprintCallable, Category = "Upgrade|Status")
-	int32 GetMaxLevel() const ;
+	int32 GetMaxLevel(int32 ComponentId) const;
 	
 	UFUNCTION(BlueprintCallable, Category = "Upgrade|Status")
-	void UpgradeComponent(const int32 ComponentId, const int32 LevelIncrease = 1) const { HandleUpgradeRequest(ComponentId, LevelIncrease) ;}
+	bool UpgradeComponent(const int32 ComponentId, const int32 LevelIncrease = 1) { return HandleUpgradeRequest(ComponentId, LevelIncrease) ;}
 
 	/** Get existing or add new resource type, return index */
 	UFUNCTION(BlueprintCallable, Category="Upgrade|Resources")
@@ -55,13 +55,17 @@ public:
 	FName GetResourceTypeName(int32 Index) const;
 	
 	int32 RegisterUpgradableComponent(UUpgradableComponent* Component);
-	void UpdateUpgradeLevel(int32 ComponentId, int32 NewLevel) const;
+	void UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel);
 	void UnregisterUpgradableComponent(int32 ComponentId);
 
 protected:
 
 	// Catalog: Map path ID -> definition levels
 	TMap<FName, TArray<FUpgradeLevelData>> UpgradeCatalog;
+	
+	// Maps component-ID → current, authoritative level.
+	UPROPERTY()
+	TArray<int32> ComponentLevels;		
 
 	// Dynamic resource type interning
 	/** Shared list of resource type names */
@@ -87,6 +91,9 @@ protected:
 	void LoadCatalogFromDataTables();
 	void LoadCatalogFromDataAssetFolder();
 
+	const TArray<FUpgradeLevelData>* GetUpgradeDefinitions(FName UpgradePathId) const;
+	const TArray<FUpgradeLevelData>* GetUpgradeDefinitions(int32 ComponentId) const;
+	const FUpgradeLevelData* GetUpgradeDefinitionForLevel(int32 ComponentId, int32 Level) const;
 	// Helpers
 	void CleanupFreeIndices();
 };
