@@ -1,4 +1,5 @@
 {
+  "UpgradePath": "TestUpgrade",
   "levels": [
       {
       "description": "No upgrade",
