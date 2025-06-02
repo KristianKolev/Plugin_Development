@@ -17,11 +17,14 @@ void UUpgradableComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Register this component with the subsystem
-	UUpgradeManagerSubsystem* Subsystem = GetWorld()->GetSubsystem<UUpgradeManagerSubsystem>();
-	if (Subsystem)
+	if (GetOwnerRole() == ROLE_Authority)
 	{
-		UpgradableID = Subsystem->RegisterUpgradableComponent(this);
+		// Register this component with the subsystem
+		UUpgradeManagerSubsystem* Subsystem = GetWorld()->GetSubsystem<UUpgradeManagerSubsystem>();
+		if (Subsystem)
+		{
+			UpgradableID = Subsystem->RegisterUpgradableComponent(this);
+		}
 	}
 }
 
