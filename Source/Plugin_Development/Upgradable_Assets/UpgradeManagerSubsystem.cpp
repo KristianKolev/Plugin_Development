@@ -36,6 +36,67 @@ UUpgradableComponent* UUpgradeManagerSubsystem::GetComponentById(const int32 Id)
 			: nullptr);
 }
 
+UUpgradableComponent* UUpgradeManagerSubsystem::FindComponentOnActorByAspect(AActor* TargetActor, EUpgradableAspect Aspect) const
+{
+	if (!TargetActor)
+		return nullptr;
+
+	TArray<UUpgradableComponent*> Comps;
+	TargetActor->GetComponents<UUpgradableComponent>(Comps);
+	for (UUpgradableComponent* Comp : Comps)
+	{
+		if (Comp && Comp->GetUpgradableAspect() == Aspect)
+		{
+			return Comp;
+		}
+	}
+	return nullptr;
+}
+
+UUpgradableComponent* UUpgradeManagerSubsystem::FindComponentOnActorByCategory(AActor* TargetActor,
+                                                                               EUpgradableCategory Category) const
+{
+	if (!TargetActor)
+		return nullptr;
+
+	TArray<UUpgradableComponent*> Comps;
+	TargetActor->GetComponents<UUpgradableComponent>(Comps);
+	for (UUpgradableComponent* Comp : Comps)
+	{
+		if (Comp && Comp->GetUpgradableCategory() == Category)
+		{
+			return Comp;
+		}
+	}
+	return nullptr;
+}
+
+bool UUpgradeManagerSubsystem::RequestUpgradeForActor(AActor* TargetActor,
+													  EUpgradableAspect Aspect,
+													  int32 LevelIncrease,
+													  const TArray<FName>& ResourceTypesArray,
+													  const TArray<int32>& ResourceAmounts)
+{
+	if (!TargetActor)
+		return false;
+
+	UUpgradableComponent* Comp = FindComponentOnActorByAspect(TargetActor, Aspect);
+	if (!Comp)
+		return false;
+
+	Comp->RequestUpgrade(LevelIncrease, ResourceTypesArray, ResourceAmounts);
+	return true;
+}
+
+int32 UUpgradeManagerSubsystem::GetUpgradeLevelForActor(AActor* TargetActor, EUpgradableAspect Aspect) const
+{
+	if (!TargetActor) return -1;
+
+	UUpgradableComponent* Comp = FindComponentOnActorByAspect(TargetActor, Aspect);
+	if (!Comp) return -1;
+	return GetCurrentLevel(Comp->GetComponentId());
+}
+
 int32 UUpgradeManagerSubsystem::GetCurrentLevel(const int32 ComponentId) const
 {
 	if (ComponentLevels.IsValidIndex(ComponentId) && ComponentLevels[ComponentId] != -1)
