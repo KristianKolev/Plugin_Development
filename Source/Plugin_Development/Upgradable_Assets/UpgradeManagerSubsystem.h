@@ -14,17 +14,15 @@ UCLASS()
 class PLUGIN_DEVELOPMENT_API UUpgradeManagerSubsystem : public UWorldSubsystem
 {
 	GENERATED_BODY()
-	UUpgradeManagerSubsystem();
-
-	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
-	virtual void Deinitialize() override;
 	
 public:
-	void InitializeProviderFromJson(const FString& Json);
-	bool HandleUpgradeRequest(int32 ComponentId, int32 LevelIncrease);
-	void LoadJsonFromFile();
+	
+	UUpgradeManagerSubsystem();
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize() override;
 
-	bool CanUpgrade(int32 ComponentId) const;
+	bool CanUpgrade(int32 ComponentId, int32 LevelIncrease, const TMap<FName, int32>& AvailableResources) const;
+	bool HandleUpgradeRequest(int32 ComponentId, int32 LevelIncrease, const TMap<FName, int32>& AvailableResources);
 	
 	UFUNCTION(BlueprintCallable, Category = "Upgrade|Status")
 	UUpgradableComponent* GetComponentById(int32 Id) const;
@@ -36,26 +34,29 @@ public:
 	int32 GetNextLevel(const int32 ComponentId) const ; 
 
 	UFUNCTION(BlueprintCallable, Category = "Upgrade|Status")
-	void GetNextLevelUpgradeCosts(int32 ComponentId, TArray<int32>& ResourceCosts, TArray<FName>& Resources) const;
+	int32 GetMaxLevel(int32 ComponentId) const;
+	
+	UFUNCTION(BlueprintCallable, Category = "Upgrade|Status")
+	void GetNextLevelUpgradeCosts(int32 ComponentId, TMap<FName, int32>& ResourceCosts) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Upgrade|Status")
 	int32 GetNextLevelUpgradeTime(const int32 ComponentId) const ;
 
 	UFUNCTION(BlueprintCallable, Category = "Upgrade|Status")
-	int32 GetMaxLevel(int32 ComponentId) const;
+	void GetUpgradeDataForLevel(int32 ComponentId, int32 Level, FUpgradeLevelData& LevelData) const { LevelData = *GetUpgradeDefinitionForLevel(ComponentId, Level);};
 	
 	UFUNCTION(BlueprintCallable, Category = "Upgrade|Status")
-	bool UpgradeComponent(const int32 ComponentId, const int32 LevelIncrease = 1) { return HandleUpgradeRequest(ComponentId, LevelIncrease) ;}
+	bool UpgradeComponent(const int32 ComponentId, const int32 LevelIncrease = 1, const TMap<FName, int32> AvailableResources) { return HandleUpgradeRequest(ComponentId, LevelIncrease, AvailableResources) ;}
 
 	/** Get existing or add new resource type, return index */
 	UFUNCTION(BlueprintCallable, Category="Upgrade|Resources")
-	int32 GetResourceTypeIndex(const FName& TypeName);
+	int32 GetResourceTypeIndex(const FName& TypeName) const;
 
 	UFUNCTION(BlueprintCallable, Category="Upgrade|Resources")
 	FName GetResourceTypeName(int32 Index) const;
 	
 	int32 RegisterUpgradableComponent(UUpgradableComponent* Component);
-	void UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel);
+	
 	void UnregisterUpgradableComponent(int32 ComponentId);
 
 protected:
@@ -83,7 +84,8 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UUpgradeJsonProvider> Provider;
 
-
+	void InitializeProviderFromJson(const FString& Json);
+	void LoadJsonFromFile();
 
 	// Loaders
 	void LoadCatalog();
@@ -91,9 +93,12 @@ protected:
 	void LoadCatalogFromDataTables();
 	void LoadCatalogFromDataAssetFolder();
 
+	// Helpers
+	void CleanupFreeIndices();
+
+	void UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel);
 	const TArray<FUpgradeLevelData>* GetUpgradeDefinitions(FName UpgradePathId) const;
 	const TArray<FUpgradeLevelData>* GetUpgradeDefinitions(int32 ComponentId) const;
 	const FUpgradeLevelData* GetUpgradeDefinitionForLevel(int32 ComponentId, int32 Level) const;
-	// Helpers
-	void CleanupFreeIndices();
+
 };
