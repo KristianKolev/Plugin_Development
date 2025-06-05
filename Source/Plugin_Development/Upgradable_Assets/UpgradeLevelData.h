@@ -54,6 +54,22 @@ struct PLUGIN_DEVELOPMENT_API FUpgradeLevelData
 };
 
 USTRUCT(BlueprintType)
+struct PLUGIN_DEVELOPMENT_API FUpgradeLevelDataAsset
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TMap<FName, int32> UpgradeResourceCosts;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 UpgradeSeconds = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	bool bUpgradeLocked = false;
+	
+};
+
+USTRUCT(BlueprintType)
 struct PLUGIN_DEVELOPMENT_API FUpgradeLevelDataVisuals
 {
 	GENERATED_BODY()
