@@ -2,6 +2,10 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
+UUpgradeJsonProvider::UUpgradeJsonProvider()
+{
+}
+
 void UUpgradeJsonProvider::InitializeFromJson(const FString& FilePath, TMap<FName, TArray<FUpgradeLevelData>>& InUpgradeCatalog, TArray<FName>& InResourceTypes)
 {
 	
@@ -102,30 +106,20 @@ void UUpgradeJsonProvider::InitializeFromJson(const FString& FilePath, TMap<FNam
 
 			Arr.Add(Data);
 			UE_LOG(LogTemp, Log, TEXT("[UPGRADEJSON_INFO_03] Successfully parsed level %d data"), lvlIndex);
-			LevelDataArray = Arr;
+			
 		}
-	UE_LOG(LogTemp, Log, TEXT("[UPGRADEJSON_INFO_04] Parsed %d upgrade levels."), LevelDataArray.Num());
+	UE_LOG(LogTemp, Log, TEXT("[UPGRADEJSON_INFO_04] Parsed %d upgrade levels."), Arr.Num());
 
 }
 
-const FUpgradeLevelData* UUpgradeJsonProvider::GetLevelData(int32 Level) const
-{
-	return LevelDataArray.IsValidIndex(Level) ? &LevelDataArray[Level] : nullptr;
-}
-
-int32 UUpgradeJsonProvider::GetMaxLevel() const
-{
-	return LevelDataArray.Num();
-}
-
-int32 UUpgradeJsonProvider::AddRequiredResourceType(FName& ResourceType, TArray<FName>& ResourceTypes)
-{
-    int32 FoundIndex = ResourceTypes.IndexOfByKey(ResourceType);
-    if (FoundIndex != INDEX_NONE)
-    {
-        return FoundIndex;
-    }
-    int32 NewIndex = ResourceTypes.Num();
-    ResourceTypes.Add(ResourceType);
-    return NewIndex;
-}
+// int32 UUpgradeJsonProvider::AddRequiredResourceType(const FName& ResourceType, TArray<FName>& ResourceTypes)
+// {
+//     int32 FoundIndex = ResourceTypes.IndexOfByKey(ResourceType);
+//     if (FoundIndex != INDEX_NONE)
+//     {
+//         return FoundIndex;
+//     }
+//     int32 NewIndex = ResourceTypes.Num();
+//     ResourceTypes.Add(ResourceType);
+//     return NewIndex;
+// }

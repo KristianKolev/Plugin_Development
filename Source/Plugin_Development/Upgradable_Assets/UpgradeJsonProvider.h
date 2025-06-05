@@ -12,6 +12,8 @@ UCLASS()
 class PLUGIN_DEVELOPMENT_API UUpgradeJsonProvider : public UUpgradeDataProvider
 {
 	GENERATED_BODY()
+public:
+	UUpgradeJsonProvider();
 
 	/**
 	 * Initializes an upgrade catalog and resource type list by parsing data from a JSON file.
@@ -26,14 +28,8 @@ class PLUGIN_DEVELOPMENT_API UUpgradeJsonProvider : public UUpgradeDataProvider
 	 *        an array of upgrade level data corresponding to that path.
 	 * @param InResourceTypes A list of all resource types identified during parsing.
 	 */
-public:
 	void InitializeFromJson(const FString& FilePath, TMap<FName, TArray<FUpgradeLevelData>>& InUpgradeCatalog, TArray<FName>& InResourceTypes);
-
-	virtual const FUpgradeLevelData* GetLevelData(int32 Level) const override;
-	virtual int32 GetMaxLevel() const override;
-	virtual int32 AddRequiredResourceType(FName &ResourceType, TArray<FName>& ResourceTypes) override;	
 	
-protected:
-	UPROPERTY()
-	TArray<FUpgradeLevelData> LevelDataArray;
+//virtual int32 AddRequiredResourceType(const FName& ResourceType, TArray<FName>& ResourceTypes) override;	
+
 };

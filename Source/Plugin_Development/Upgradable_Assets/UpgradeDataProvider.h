@@ -1,5 +1,3 @@
-
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -10,10 +8,22 @@
 UCLASS(Abstract)
 class PLUGIN_DEVELOPMENT_API UUpgradeDataProvider : public UObject
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	virtual const FUpgradeLevelData* GetLevelData(int32 Level) const PURE_VIRTUAL(UUpgradeDataProvider::GetLevelData, return nullptr;);
-	virtual int32 GetMaxLevel() const PURE_VIRTUAL(UUpgradeDataProvider::GetMaxLevels, return 0;);
-	virtual int32 AddRequiredResourceType(FName &ResourceType, TArray<FName>& ResourceTypes) PURE_VIRTUAL(UUpgradeDataProvider::AddRequiredResourceType, return 0;)
+    UUpgradeDataProvider();    
+    virtual void InitializeData(const FString& FilePath, TMap<FName, TArray<FUpgradeLevelData>>& OutCatalog, TArray<FName>& OutResourceTypes) PURE_VIRTUAL(UUpgradeDataProviderBase::InitializeData, );
+    
+    // Changed from pure virtual to virtual with implementation
+    virtual int32 AddRequiredResourceType(const FName& ResourceType, TArray<FName>& ResourceTypes)
+    {
+        int32 FoundIndex = ResourceTypes.IndexOfByKey(ResourceType);
+        if (FoundIndex != INDEX_NONE)
+        {
+            return FoundIndex;
+        }
+        int32 NewIndex = ResourceTypes.Num();
+        ResourceTypes.Add(ResourceType);
+        return NewIndex;
+    }
 };
