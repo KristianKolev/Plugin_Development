@@ -88,6 +88,66 @@ bool UUpgradeManagerSubsystem::RequestUpgradeForActor(AActor* TargetActor,
 	return true;
 }
 
+TArray<UUpgradableComponent*> UUpgradeManagerSubsystem::GetComponentsByAspect(EUpgradableAspect Aspect,
+	int32 LevelFilter) const
+{
+	TArray<UUpgradableComponent*> Result;
+
+	for (int32 Id = 0; Id < RegisteredComponents.Num(); ++Id)
+	{
+		if (!RegisteredComponents[Id].IsValid())
+			continue;
+
+		UUpgradableComponent* Comp = RegisteredComponents[Id].Get();
+		if (!Comp)
+			continue;
+
+		if (Comp->GetUpgradableAspect() != Aspect)
+			continue;
+
+		// If a level filter is specified, ensure it matches
+		if (LevelFilter >= 0)
+		{
+			if (!ComponentLevels.IsValidIndex(Id) || ComponentLevels[Id] != LevelFilter)
+				continue;
+		}
+
+		Result.Add(Comp);
+	}
+
+	return Result;
+}
+
+TArray<UUpgradableComponent*> UUpgradeManagerSubsystem::GetComponentsByUpgradePath(FName PathId,
+	int32 LevelFilter) const
+{
+	TArray<UUpgradableComponent*> Result;
+
+	for (int32 Id = 0; Id < RegisteredComponents.Num(); ++Id)
+	{
+		if (!RegisteredComponents[Id].IsValid())
+			continue;
+
+		UUpgradableComponent* Comp = RegisteredComponents[Id].Get();
+		if (!Comp)
+			continue;
+
+		if (Comp->UpgradePathId != PathId)
+			continue;
+
+		// If a level filter is specified, ensure it matches
+		if (LevelFilter >= 0)
+		{
+			if (!ComponentLevels.IsValidIndex(Id) || ComponentLevels[Id] != LevelFilter)
+				continue;
+		}
+
+		Result.Add(Comp);
+	}
+
+	return Result;
+}
+
 int32 UUpgradeManagerSubsystem::GetUpgradeLevelForActor(AActor* TargetActor, EUpgradableAspect Aspect) const
 {
 	if (!TargetActor) return -1;

@@ -47,6 +47,24 @@ public:
 								const TArray<int32>& ResourceAmounts);
 
 	/**
+	* Returns an array of every UUpgradableComponent in the world matching the specified filters.
+	* @param Aspect The aspect to filter by.
+	* @param LevelFilter If >= 0, only returns those whose current level == LevelFilter.
+	*/
+	UFUNCTION(BlueprintCallable, Category="Upgrade|Query")
+	TArray<UUpgradableComponent*> GetComponentsByAspect(EUpgradableAspect Aspect, int32 LevelFilter = -1) const;
+
+	/**
+	 * Returns an array of every UUpgradableComponent in the world with UpgradePathId == PathId.
+	 * If LevelFilter >= 0, only returns those whose current level == LevelFilter.
+	 * @param PathId The path ID to filter by.
+	 * @param LevelFilter If >= 0, only returns those whose current level == LevelFilter.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Upgrade|Query")
+	TArray<UUpgradableComponent*> GetComponentsByUpgradePath(FName PathId, int32 LevelFilter = -1) const;
+
+
+	/**
 	* Returns the current, client-visible level of the component on TargetActor
 	* whose Aspect == the enum passed in. Returns –1 if none.
 	*/
