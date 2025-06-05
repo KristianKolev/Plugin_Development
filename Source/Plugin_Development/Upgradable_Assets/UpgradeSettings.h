@@ -23,13 +23,13 @@ public:
 
 	// Directory path under Content/ for JSON files
 	UPROPERTY(EditAnywhere, config, Category="Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::JsonDirectory"))
-	FString JsonDirectory = TEXT("Data/Upgrade");
+	FString JsonDirectory = TEXT("Data/UpgradeJSONs/");
 
 	// DataTable assets for definitions (can list multiple)
-	UPROPERTY(EditAnywhere, config, Category="Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::DataTable", AllowedClasses="DataTable"))
-	TArray<TSoftObjectPtr<UDataTable>> CatalogDataTables;
+	UPROPERTY(EditAnywhere, config, Category="Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::DataTable"))
+	FString DataTableFolderPath = TEXT("/Game/Data/UpgradeDataTables");
 
 	// Folder path for DataAssets
 	UPROPERTY(EditAnywhere, config, Category="Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::DataAssetFolder"))
-	FString DataAssetFolderPath = TEXT("/Game/UpgradeAssets");
+	FString DataAssetFolderPath = TEXT("/Game/Data/UpgradeAssets");
 };
