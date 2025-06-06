@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "FindInBlueprintManager.h"
 #include "UpgradableComponent.h"
+#include "UpgradeDataProvider.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "UpgradeManagerSubsystem.generated.h"
 
@@ -21,6 +22,8 @@ public:
 	UUpgradeManagerSubsystem();
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
+	void InitializeProvider();
+	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 
 	bool CanUpgrade(int32 ComponentId, int32 LevelIncrease, const TMap<FName, int32>& AvailableResources) const;
 	bool HandleUpgradeRequest(int32 ComponentId, int32 LevelIncrease, const TMap<FName, int32>& AvailableResources);
@@ -116,6 +119,10 @@ protected:
 
 	// Catalog: Map path ID -> definition levels
 	TMap<FName, TArray<FUpgradeLevelData>> UpgradeCatalog;
+
+	// In your subsystem header:
+	UPROPERTY()
+	TArray<TWeakObjectPtr<UUpgradableComponent>> RegisteredComponents;
 	
 	// Maps component-ID → current, authoritative level.
 	UPROPERTY()
@@ -125,16 +132,18 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Upgrade|Resources")
 	TArray<FName> ResourceTypes;
 	
-	// In your subsystem header:
-	UPROPERTY()
-	TArray<TWeakObjectPtr<UUpgradableComponent>> RegisteredComponents;
-
 	// Stack of free slots:
 	UPROPERTY()
 	TArray<int32> FreeIndices;
 
 	UPROPERTY()
+	FString UpgradeDataFolderPath;
+
+	UPROPERTY()
 	TObjectPtr<UUpgradeJsonProvider> Provider;
+
+	UPROPERTY()
+	TObjectPtr<UUpgradeDataProvider> DataProvider;
 
 	void InitializeProviderFromJson(const FString& Json);
 	void LoadJsonFromFile();

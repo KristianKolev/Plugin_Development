@@ -1,6 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "UpgradeManagerSubsystem.h"
 #include "UpgradableComponent.h"
+#include "UpgradeDataAssetProvider.h"
+#include "UpgradeDataTableProvider.h"
 #include "UpgradeJsonProvider.h"
 #include "UpgradeSettings.h"
 #include "GameFramework/Actor.h"
@@ -15,12 +17,56 @@ UUpgradeManagerSubsystem::UUpgradeManagerSubsystem()
 void UUpgradeManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-	LoadJsonFromFile();
+	
+
+	
+	
+	// LoadJsonFromFile();
 }
 
 void UUpgradeManagerSubsystem::Deinitialize()
 {
+	DataProvider = nullptr;
 	Super::Deinitialize();
+}
+
+void UUpgradeManagerSubsystem::InitializeProvider()
+{
+	const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
+	switch (Settings->CatalogSource)
+	{
+	case EUpgradeCatalogSource::JsonFolder:
+		DataProvider = NewObject<UUpgradeJsonProvider>(this);
+		UpgradeDataFolderPath = FPaths::ProjectContentDir() / Settings->JsonFolderPath;
+		break;
+	case EUpgradeCatalogSource::DataTableFolder:
+		DataProvider = NewObject<UUpgradeDataTableProvider>(this);
+		UpgradeDataFolderPath = Settings->DataTableFolderPath;
+		break;
+	case EUpgradeCatalogSource::DataAssetFolder:
+		DataProvider = NewObject<UUpgradeDataAssetProvider>(this);
+		UpgradeDataFolderPath = Settings->DataAssetFolderPath;
+		break;
+	default:
+		DataProvider = nullptr;
+		UpgradeDataFolderPath = TEXT("Data/");
+		break;
+	}
+}
+
+void UUpgradeManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
+{
+	Super::OnWorldBeginPlay(InWorld);
+	InitializeProvider();
+	LoadCatalog();
+}
+
+void UUpgradeManagerSubsystem::LoadCatalog()
+{
+	if (!DataProvider)
+		return;
+	
+	DataProvider->InitializeData(UpgradeDataFolderPath, UpgradeCatalog, ResourceTypes);
 }
 
 void UUpgradeManagerSubsystem::InitializeProviderFromJson(const FString& Json)
@@ -276,9 +322,7 @@ void UUpgradeManagerSubsystem::UnregisterUpgradableComponent(const int32 Compone
 	}
 }
 
-void UUpgradeManagerSubsystem::LoadCatalog()
-{
-}
+
 
 bool UUpgradeManagerSubsystem::CanUpgrade(const int32 ComponentId, const int32 LevelIncrease, const TMap<FName, int32>& AvailableResources) const
 {
@@ -344,7 +388,7 @@ void UUpgradeManagerSubsystem::LoadJsonFromFile()
 {
 
     const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
-    const FString Dir = FPaths::ProjectContentDir() / Settings->JsonDirectory;
+    const FString Dir = FPaths::ProjectContentDir() / Settings->JsonFolderPath;
     TArray<FString> Files;
     IFileManager::Get().FindFilesRecursive(Files, *Dir, TEXT("*.json"), true, false);
     UpgradeCatalog.Empty();
