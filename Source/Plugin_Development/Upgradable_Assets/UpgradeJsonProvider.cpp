@@ -215,6 +215,13 @@ void UUpgradeJsonProvider::InitializeData(const FString& FilePath, TMap<FName, T
 			}
 			Data.UpgradeSeconds = SecondsVal;
 
+			bool bLocked = true;
+			if (!(*Obj)->TryGetBoolField(TEXT("UpgradeLocked"), bLocked))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_09] Level %d in %s missing or invalid 'UpgradeLocked' field."), lvlIndex, *FilePath);
+			}
+			Data.bUpgradeLocked = bLocked;
+			
 			Arr.Add(Data);
 			UE_LOG(LogTemp, Log, TEXT("[UPGRADEJSON_INFO_03] Successfully parsed level %d data"), lvlIndex);
 			
