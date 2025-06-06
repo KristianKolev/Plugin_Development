@@ -29,7 +29,6 @@ public:
 	 * @param InResourceTypes A list of all resource types identified during parsing.
 	 */
 	void InitializeFromJson(const FString& FilePath, TMap<FName, TArray<FUpgradeLevelData>>& InUpgradeCatalog, TArray<FName>& InResourceTypes);
-	
-//virtual int32 AddRequiredResourceType(const FName& ResourceType, TArray<FName>& ResourceTypes) override;	
 
+	virtual void InitializeData(const FString& FilePath, TMap<FName, TArray<FUpgradeLevelData>>& OutCatalog, TArray<FName>& OutResourceTypes) override;
 };

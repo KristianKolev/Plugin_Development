@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "FindInBlueprintManager.h"
 #include "UpgradableComponent.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "UpgradeManagerSubsystem.generated.h"
@@ -97,7 +98,7 @@ public:
 
 	/** Attempts to upgrade a component by the specified number of levels */
 	UFUNCTION(BlueprintCallable, Category = "Upgrade|Status")
-	bool UpgradeComponent(const int32 ComponentId, const int32 LevelIncrease = 1, const TMap<FName, int32> AvailableResources) { return HandleUpgradeRequest(ComponentId, LevelIncrease, AvailableResources) ;}
+	bool UpgradeComponent(const int32 ComponentId, const TMap<FName, int32> AvailableResources, const int32 LevelIncrease = 1) { return HandleUpgradeRequest(ComponentId, LevelIncrease, AvailableResources) ;}
 
 	/** Get existing or add new resource type, return index */
 	UFUNCTION(BlueprintCallable, Category="Upgrade|Resources")

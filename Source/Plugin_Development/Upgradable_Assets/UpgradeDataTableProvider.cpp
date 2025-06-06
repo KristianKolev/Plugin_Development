@@ -7,40 +7,6 @@ UUpgradeDataTableProvider::UUpgradeDataTableProvider()
 {
 }
 
-void UUpgradeDataTableProvider::InitializeFromDataTable(UDataTable* DataTable)
-{
-
-	
-	/*const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
-	UpgradeCatalog.Empty();
-
-	for (const TSoftObjectPtr<UDataTable>& DataTablePtr : Settings->CatalogDataTables)
-	{
-		UDataTable* Table = DataTablePtr.LoadSynchronous();
-		if (!Table)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Failed to load DataTable: %s"), *DataTablePtr.ToString());
-			continue;
-		}
-
-		for (auto& RowPair : Table->GetRowMap())
-		{
-			FName RowName = RowPair.Key;
-			FUpgradeDefinition* Def = (FUpgradeDefinition*)RowPair.Value;
-			if (!Def)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Invalid row '%s' in DataTable %s"), *RowName.ToString(), *Table->GetName());
-				continue;
-			}
-			// Determine path ID: use Def->UpgradePath if set, else RowName
-			FName PathId = !Def->UpgradePath.IsNone() ? Def->UpgradePath : RowName;
-			// Levels already contain ResourceTypeIndices, UpgradeCosts, UpgradeSeconds
-			UpgradeCatalog.Add(PathId, Def->Levels);
-		}
-	}
-	UE_LOG(LogTemp, Log, TEXT("Loaded %d DataTable catalogs"), UpgradeCatalog.Num());*/
-}
-
 void UUpgradeDataTableProvider::InitializeData(const FString& FilePath, TMap<FName, TArray<FUpgradeLevelData>>& OutCatalog, TArray<FName>& OutResourceTypes)
 {
     FAssetRegistryModule& AR = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
@@ -82,15 +48,13 @@ void UUpgradeDataTableProvider::InitializeData(const FString& FilePath, TMap<FNa
             for (const auto& ResourcePair : AssetData->UpgradeResourceCosts)
             {
                 // Add the resource type and get its index
-                int32 TypeIdx = AddRequiredResourceType(ResourcePair.Key, OutResourceTypes);
+                int32 TypeIdx = AddOrFindRequiredResourceTypeIndex(ResourcePair.Key, OutResourceTypes);
                 
-                TypeIndices.Add(TypeIdx);
-                CostsArr.Add(ResourcePair.Value);
+                LevelData.ResourceTypeIndices.Add(TypeIdx);
+                LevelData.UpgradeCosts.Add(ResourcePair.Value);
             }
 
             // Set the converted data
-            LevelData.ResourceTypeIndices = MoveTemp(TypeIndices);
-            LevelData.UpgradeCosts = MoveTemp(CostsArr);
             LevelData.UpgradeSeconds = AssetData->UpgradeSeconds;
             LevelData.bUpgradeLocked = AssetData->bUpgradeLocked;
             
@@ -101,15 +65,3 @@ void UUpgradeDataTableProvider::InitializeData(const FString& FilePath, TMap<FNa
     UE_LOG(LogTemp, Log, TEXT("UpgradeDataTableProvider: Loaded %d DataTables from '%s' (found %d PathIds)"),
            LoadedTables, *FilePath, OutCatalog.Num());
 }
-
-// int32 UUpgradeDataTableProvider::AddRequiredResourceType(const FName& ResourceType, TArray<FName>& ResourceTypes)
-// {
-//     int32 FoundIndex = ResourceTypes.IndexOfByKey(ResourceType);
-//     if (FoundIndex != INDEX_NONE)
-//     {
-//         return FoundIndex;
-//     }
-//     int32 NewIndex = ResourceTypes.Num();
-//     ResourceTypes.Add(ResourceType);
-//     return NewIndex;
-// }

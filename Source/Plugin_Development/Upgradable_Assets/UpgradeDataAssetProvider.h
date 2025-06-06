@@ -14,6 +14,6 @@ public:
 
 
 	virtual void InitializeData(const FString& FilePath, TMap<FName, TArray<FUpgradeLevelData>>& OutCatalog, TArray<FName>& OutResourceTypes) override;
-	virtual int32 AddRequiredResourceType(const FName& ResourceType, TArray<FName>& ResourceTypes) override;	
+
 };
 
