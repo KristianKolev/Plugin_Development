@@ -7,7 +7,8 @@
         { "type": "Gold", "amount": 10 },
         { "type": "Iron", "amount": 5 }
       ],
-      "upgradeSeconds": 5
+      "upgradeSeconds": 5,
+      "UpgradeLocked": false
     },
     {
       "description": "Basic upgrade",
@@ -15,7 +16,8 @@
         { "type": "Gold", "amount": 100 },
         { "type": "Iron", "amount": 50 }
       ],
-      "upgradeSeconds": 10
+      "upgradeSeconds": 10,
+      "UpgradeLocked": false
     },
     {
       "description": "Advanced upgrade",
@@ -23,7 +25,8 @@
         { "type": "Gold", "amount": 200 },
         { "type": "Iron", "amount": 75 }
       ],
-      "upgradeSeconds": 30
+      "upgradeSeconds": 30,
+      "UpgradeLocked": false
     },
     {
       "description": "Expert upgrade",
@@ -31,7 +34,8 @@
         { "type": "Gold", "amount": 300 },
         { "type": "Iron", "amount": 100 }
       ],
-      "upgradeSeconds": 60
+      "upgradeSeconds": 60,
+      "UpgradeLocked": false
     },
     {
       "description": "Master upgrade",
@@ -39,7 +43,8 @@
         { "type": "Gold", "amount": 500 },
         { "type": "Iron", "amount": 150 }
       ],
-      "upgradeSeconds": 120
+      "upgradeSeconds": 120,
+      "UpgradeLocked": false
     }
   ]
 }
