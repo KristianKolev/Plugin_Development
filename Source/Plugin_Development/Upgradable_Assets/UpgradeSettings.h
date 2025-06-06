@@ -6,8 +6,8 @@
 UENUM(BlueprintType)
 enum class EUpgradeCatalogSource : uint8
 {
-	JsonDirectory  UMETA(DisplayName = "JSON Directory"),
-	DataTable      UMETA(DisplayName = "Data Table"),
+	JsonFolder  UMETA(DisplayName = "JSON Folder"),
+	DataTableFolder      UMETA(DisplayName = "Data Table Folder"),
 	DataAssetFolder UMETA(DisplayName = "Data Asset Folder")
 };
 
@@ -19,17 +19,17 @@ class UUpgradeSettings : public UDeveloperSettings
 public:
 	// Select catalog source
 	UPROPERTY(EditAnywhere, config, Category="Catalog")
-	EUpgradeCatalogSource CatalogSource = EUpgradeCatalogSource::JsonDirectory;
+	EUpgradeCatalogSource CatalogSource = EUpgradeCatalogSource::JsonFolder;
 
 	// Directory path under Content/ for JSON files
-	UPROPERTY(EditAnywhere, config, Category="Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::JsonDirectory"))
-	FString JsonDirectory = TEXT("Data/UpgradeJSONs/");
+	UPROPERTY(EditAnywhere, config, Category="Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::JsonFolder"))
+	FString JsonFolderPath = TEXT("Data/UpgradeJSONs");
 
-	// DataTable assets for definitions (can list multiple)
-	UPROPERTY(EditAnywhere, config, Category="Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::DataTable"))
+	// Directory path for DataTables: include /Game/...
+	UPROPERTY(EditAnywhere, config, Category="Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::DataTableFolder"))
 	FString DataTableFolderPath = TEXT("/Game/Data/UpgradeDataTables");
 
-	// Folder path for DataAssets
+	// Directory path for DataAssets: include /Game/...
 	UPROPERTY(EditAnywhere, config, Category="Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::DataAssetFolder"))
-	FString DataAssetFolderPath = TEXT("/Game/Data/UpgradeAssets");
+	FString DataAssetFolderPath = TEXT("/Game/Data/UpgradeDataAssets");
 };

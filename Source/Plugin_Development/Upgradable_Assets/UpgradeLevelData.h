@@ -54,7 +54,7 @@ struct PLUGIN_DEVELOPMENT_API FUpgradeLevelData
 };
 
 USTRUCT(BlueprintType)
-struct PLUGIN_DEVELOPMENT_API FUpgradeLevelDataAsset
+struct PLUGIN_DEVELOPMENT_API FUpgradeLevelDataAsset : public FTableRowBase
 {
 	GENERATED_BODY()
 

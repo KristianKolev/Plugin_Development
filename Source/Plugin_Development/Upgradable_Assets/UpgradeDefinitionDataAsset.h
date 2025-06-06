@@ -12,9 +12,9 @@ class PLUGIN_DEVELOPMENT_API UUpgradeDefinitionDataAsset : public UDataAsset
 	GENERATED_BODY()
 
 public:
-	// Override path ID for this upgrade definition (if None, will use asset name)
+	// Provide path ID for this upgrade definition (if None, will use asset name)
 	UPROPERTY(EditAnywhere, Category = "Upgrade")
-	FName OverrideUpgradePath;
+	FName UpgradePath;
 
 	// Array of upgrade levels
 	UPROPERTY(EditAnywhere, Category = "Upgrade")
