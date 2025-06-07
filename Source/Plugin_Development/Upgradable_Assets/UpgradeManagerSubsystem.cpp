@@ -6,7 +6,6 @@
 #include "UpgradeJsonProvider.h"
 #include "UpgradeSettings.h"
 #include "GameFramework/Actor.h"
-#include "GameFramework/PlayerState.h"
 #include "Windows/WindowsApplication.h"
 
 
@@ -17,11 +16,6 @@ UUpgradeManagerSubsystem::UUpgradeManagerSubsystem()
 void UUpgradeManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-	
-
-	
-	
-	// LoadJsonFromFile();
 }
 
 void UUpgradeManagerSubsystem::Deinitialize()
@@ -49,7 +43,7 @@ void UUpgradeManagerSubsystem::InitializeProvider()
 		break;
 	default:
 		DataProvider = nullptr;
-		UpgradeDataFolderPath = TEXT("Data/");
+		UpgradeDataFolderPath = TEXT("INVALID PATH");
 		break;
 	}
 }
@@ -67,12 +61,6 @@ void UUpgradeManagerSubsystem::LoadCatalog()
 		return;
 	
 	DataProvider->InitializeData(UpgradeDataFolderPath, UpgradeCatalog, ResourceTypes);
-}
-
-void UUpgradeManagerSubsystem::InitializeProviderFromJson(const FString& Json)
-{
-	Provider = NewObject<UUpgradeJsonProvider>(this);
-	Provider->InitializeFromJson(Json, UpgradeCatalog, ResourceTypes);
 }
 
 UUpgradableComponent* UUpgradeManagerSubsystem::GetComponentById(const int32 Id) const
@@ -194,6 +182,17 @@ TArray<UUpgradableComponent*> UUpgradeManagerSubsystem::GetComponentsByUpgradePa
 	return Result;
 }
 
+TArray<FUpgradeDefinition> UUpgradeManagerSubsystem::GetUpgradeDefinitionsForPath(FName PathId) const
+{
+	TArray<FUpgradeDefinition> Result;
+	const TArray<FUpgradeDefinition>* UpgradeDefinitions = GetUpgradeDefinitions(PathId);
+	if (UpgradeDefinitions)
+	{
+		Result = *UpgradeDefinitions;
+	}
+	return Result;
+}
+
 int32 UUpgradeManagerSubsystem::GetUpgradeLevelForActor(AActor* TargetActor, EUpgradableAspect Aspect) const
 {
 	if (!TargetActor) return -1;
@@ -245,7 +244,7 @@ FName UUpgradeManagerSubsystem::GetResourceTypeName(const int32 Index) const
 
 void UUpgradeManagerSubsystem::GetNextLevelUpgradeCosts(const int32 ComponentId, TMap<FName, int32>& ResourceCosts) const
 {
-	if (const FUpgradeLevelData* UpgradeDefinition = GetUpgradeDefinitionForLevel(ComponentId, GetNextLevel(ComponentId)))
+	if (const FUpgradeDefinition* UpgradeDefinition = GetUpgradeDefinitionForLevel(ComponentId, GetNextLevel(ComponentId)))
 	{
 		for (int32 i = 0; i < UpgradeDefinition->ResourceTypeIndices.Num(); ++i)
 		{
@@ -257,28 +256,28 @@ void UUpgradeManagerSubsystem::GetNextLevelUpgradeCosts(const int32 ComponentId,
 int32 UUpgradeManagerSubsystem::GetNextLevelUpgradeTime(const int32 ComponentId) const
 {
 	int32 SecondsForUpgrade = -1;
-	if (const FUpgradeLevelData* UpgradeDefinition = GetUpgradeDefinitionForLevel(ComponentId, GetNextLevel(ComponentId)))
+	if (const FUpgradeDefinition* UpgradeDefinition = GetUpgradeDefinitionForLevel(ComponentId, GetNextLevel(ComponentId)))
 	{
 		SecondsForUpgrade = UpgradeDefinition->UpgradeSeconds;
 	}
 	return SecondsForUpgrade;
 }
 
-const TArray<FUpgradeLevelData>* UUpgradeManagerSubsystem::GetUpgradeDefinitions(FName UpgradePathId) const
+const TArray<FUpgradeDefinition>* UUpgradeManagerSubsystem::GetUpgradeDefinitions(FName UpgradePathId) const
 {
 	return UpgradeCatalog.Find(UpgradePathId);
 }
 
-const TArray<FUpgradeLevelData>* UUpgradeManagerSubsystem::GetUpgradeDefinitions(int32 ComponentId) const
+const TArray<FUpgradeDefinition>* UUpgradeManagerSubsystem::GetUpgradeDefinitions(int32 ComponentId) const
 {
 	const UUpgradableComponent* Comp = GetComponentById(ComponentId);
 	if (!Comp) return nullptr;
 	return UpgradeCatalog.Find(Comp->UpgradePathId);
 }
 
-const FUpgradeLevelData* UUpgradeManagerSubsystem::GetUpgradeDefinitionForLevel(int32 ComponentId, int32 Level) const
+const FUpgradeDefinition* UUpgradeManagerSubsystem::GetUpgradeDefinitionForLevel(int32 ComponentId, int32 Level) const
 {
-	const TArray<FUpgradeLevelData>* UpgradeDefinitions = GetUpgradeDefinitions(ComponentId);
+	const TArray<FUpgradeDefinition>* UpgradeDefinitions = GetUpgradeDefinitions(ComponentId);
 	if (!UpgradeDefinitions || Level < 0 || Level > UpgradeDefinitions->Num()-1 ) return nullptr;
 	return &(*UpgradeDefinitions)[Level];
 }
@@ -333,9 +332,9 @@ bool UUpgradeManagerSubsystem::CanUpgrade(const int32 ComponentId, const int32 L
 	// Trying to upgrade to a level higher than the max level
 	if (GetCurrentLevel(ComponentId) + LevelIncrease > GetMaxLevel(ComponentId)) return false;
 
-	if (const TArray<FUpgradeLevelData>* UpgradeDefinitions = GetUpgradeDefinitions(ComponentId))
+	if (const TArray<FUpgradeDefinition>* UpgradeDefinitions = GetUpgradeDefinitions(ComponentId))
 	{
-		const FUpgradeLevelData* LevelData = &(*UpgradeDefinitions)[GetCurrentLevel(ComponentId)];
+		const FUpgradeDefinition* LevelData = &(*UpgradeDefinitions)[GetCurrentLevel(ComponentId)];
 		// Future implementation idea: Add upgrade queue to chain multiple upgrades
 		if (LevelData->bUpgrading) return false;
 		TMap<FName, int32> TotalResourceCosts;
@@ -370,11 +369,11 @@ bool UUpgradeManagerSubsystem::CanUpgrade(const int32 ComponentId, const int32 L
 bool UUpgradeManagerSubsystem::HandleUpgradeRequest(const int32 ComponentId, const int32 LevelIncrease, const TMap<FName, int32>& AvailableResources)
 {
 	const UUpgradableComponent* Comp = GetComponentById(ComponentId);
-	if (!Comp || !Comp->GetOwner()->HasAuthority()) return false;
+	if (!Comp/* || !Comp->GetOwner()->HasAuthority()*/) return false;
 
 	const int32 CurrentLevel = ComponentLevels[ComponentId];
 	if (!ComponentLevels.IsValidIndex(ComponentId) || ComponentLevels[ComponentId] == -1) return false;	  // not registered
-	const TArray<FUpgradeLevelData>* UpgradeDefinitions = GetUpgradeDefinitions(ComponentId);
+	const TArray<FUpgradeDefinition>* UpgradeDefinitions = GetUpgradeDefinitions(ComponentId);
 	if (!UpgradeDefinitions || CurrentLevel >= UpgradeDefinitions->Num()-1) return false;
 	
 	if (!CanUpgrade(ComponentId, LevelIncrease, AvailableResources)) return false;
@@ -383,20 +382,3 @@ bool UUpgradeManagerSubsystem::HandleUpgradeRequest(const int32 ComponentId, con
 	UpdateUpgradeLevel(ComponentId, NewLevel);
 	return true;
 }
-
-void UUpgradeManagerSubsystem::LoadJsonFromFile()
-{
-
-    const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
-    const FString Dir = FPaths::ProjectContentDir() / Settings->JsonFolderPath;
-    TArray<FString> Files;
-    IFileManager::Get().FindFilesRecursive(Files, *Dir, TEXT("*.json"), true, false);
-    UpgradeCatalog.Empty();
-
-	for (const FString& FilePath : Files)
-    {
-	    InitializeProviderFromJson(FilePath);
-    }
-}
-
-
