@@ -18,18 +18,18 @@ class UUpgradeSettings : public UDeveloperSettings
 
 public:
 	// Select catalog source
-	UPROPERTY(EditAnywhere, config, Category="Catalog")
+	UPROPERTY(EditAnywhere, config, Category="Upgrade Catalog")
 	EUpgradeCatalogSource CatalogSource = EUpgradeCatalogSource::JsonFolder;
 
 	// Directory path under Content/ for JSON files
-	UPROPERTY(EditAnywhere, config, Category="Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::JsonFolder"))
+	UPROPERTY(EditAnywhere, config, Category="Upgrade Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::JsonFolder"))
 	FString JsonFolderPath = TEXT("Data/UpgradeJSONs");
 
 	// Directory path for DataTables: include /Game/...
-	UPROPERTY(EditAnywhere, config, Category="Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::DataTableFolder"))
+	UPROPERTY(EditAnywhere, config, Category="Upgrade Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::DataTableFolder"))
 	FString DataTableFolderPath = TEXT("/Game/Data/UpgradeDataTables");
 
 	// Directory path for DataAssets: include /Game/...
-	UPROPERTY(EditAnywhere, config, Category="Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::DataAssetFolder"))
+	UPROPERTY(EditAnywhere, config, Category="Upgrade Catalog", meta=(EditCondition="CatalogSource==EUpgradeCatalogSource::DataAssetFolder"))
 	FString DataAssetFolderPath = TEXT("/Game/Data/UpgradeDataAssets");
 };

@@ -2,9 +2,9 @@
 
 #include "CoreMinimal.h"
 #include "NiagaraSystem.h"
-#include "UpgradeLevelData.generated.h"
+#include "UpgradeDataContainers.generated.h"
 
-USTRUCT(BlueprintType)	//Maybe unnecessary and replaced by enum
+USTRUCT(BlueprintType)	//This will be useful for the resource management system. The upgrade system doesnt need to know resource descriptions
 struct PLUGIN_DEVELOPMENT_API FResourceType
 {
 	GENERATED_BODY()
@@ -32,7 +32,7 @@ enum class EResourceType : uint8
 };
 
 USTRUCT(BlueprintType)
-struct PLUGIN_DEVELOPMENT_API FUpgradeLevelData
+struct PLUGIN_DEVELOPMENT_API FUpgradeDefinition
 {
 	GENERATED_BODY()
 
@@ -54,7 +54,7 @@ struct PLUGIN_DEVELOPMENT_API FUpgradeLevelData
 };
 
 USTRUCT(BlueprintType)
-struct PLUGIN_DEVELOPMENT_API FUpgradeLevelDataAsset : public FTableRowBase
+struct PLUGIN_DEVELOPMENT_API FUpgradeDefinitionAsset : public FTableRowBase
 {
 	GENERATED_BODY()
 
@@ -70,7 +70,7 @@ struct PLUGIN_DEVELOPMENT_API FUpgradeLevelDataAsset : public FTableRowBase
 };
 
 USTRUCT(BlueprintType)
-struct PLUGIN_DEVELOPMENT_API FUpgradeLevelDataVisuals
+struct PLUGIN_DEVELOPMENT_API FLevelUpVisuals
 {
 	GENERATED_BODY()
 

@@ -1,30 +1,24 @@
 #include "UpgradeDataAssetProvider.h"
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "Modules/ModuleManager.h"
 #include "UpgradeDefinitionDataAsset.h"
 
 UUpgradeDataAssetProvider::UUpgradeDataAssetProvider()
 {
 }
 
-void UUpgradeDataAssetProvider::InitializeData(const FString& FilePath, TMap<FName, TArray<FUpgradeLevelData>>& OutCatalog, TArray<FName>& OutResourceTypes)
+void UUpgradeDataAssetProvider::InitializeData(const FString& FolderPath, TMap<FName, TArray<FUpgradeDefinition>>& OutCatalog, TArray<FName>& OutResourceTypes)
 {
     // Query AssetRegistry for all assets under that path
     FAssetRegistryModule& RegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-    TArray<FAssetData> AssetList;
-    RegistryModule.Get().GetAssetsByPath(FName(*FilePath), AssetList, /*bRecursive=*/true);
-
-   
+    TArray<FAssetData> AssetsInFolder;
+    RegistryModule.Get().GetAssetsByPath(FName(*FolderPath), AssetsInFolder, /*bRecursive=*/true);
  
-    
     int32 LoadedAssets = 0;
-    for (const FAssetData& AssetData : AssetList)
+    for (const FAssetData& AssetData : AssetsInFolder)
     {
-        // Only care about UpgradeDefinitionDataAsset assets
         if (AssetData.AssetClassPath != UUpgradeDefinitionDataAsset::StaticClass()->GetClassPathName())
             continue;
 
-        // Load the asset
         UUpgradeDefinitionDataAsset* Asset = Cast<UUpgradeDefinitionDataAsset>(AssetData.GetAsset());
         if (!Asset)
         {
@@ -33,17 +27,14 @@ void UUpgradeDataAssetProvider::InitializeData(const FString& FilePath, TMap<FNa
             continue;
         }
         ++LoadedAssets;
+        // Fallback to asset name if no UpgradePathId is set
+        FName PathId = !Asset->UpgradePathId.IsNone() ? Asset->UpgradePathId : AssetData.AssetName;
+        TArray<FUpgradeDefinition>& LevelDataArray = OutCatalog.FindOrAdd(PathId);
 
-        // Determine which PathId to use:
-        // If the asset has an explicit OverrideUpgradePath (non-None), use that; otherwise fallback to asset name
-        FName PathId = !Asset->UpgradePath.IsNone() ? Asset->UpgradePath : AssetData.AssetName;
-        TArray<FUpgradeLevelData>& LevelDataArray = OutCatalog.FindOrAdd(PathId);
-
-        for (const FUpgradeLevelDataAsset& LevelAsset : Asset->Levels)
+        for (const FUpgradeDefinitionAsset& LevelAsset : Asset->Levels)
         {
-            FUpgradeLevelData LevelData;
-            
-            // Process resource types and costs
+
+            FUpgradeDefinition LevelData;
             for (const auto& Resource : LevelAsset.UpgradeResourceCosts)
             {
                 int32 ResourceIndex = AddOrFindRequiredResourceTypeIndex(Resource.Key, OutResourceTypes);
@@ -53,11 +44,9 @@ void UUpgradeDataAssetProvider::InitializeData(const FString& FilePath, TMap<FNa
             
             LevelData.UpgradeSeconds = LevelAsset.UpgradeSeconds;
             LevelData.bUpgradeLocked = LevelAsset.bUpgradeLocked;
-            
             LevelDataArray.Add(LevelData);
         }
     }
-
     UE_LOG(LogTemp, Log, TEXT("UpgradeDataAssetProvider: Loaded %d Data Assets from '%s' (found %d PathIds)"),
-        LoadedAssets, *FilePath, OutCatalog.Num());
+        LoadedAssets, *FolderPath, OutCatalog.Num());
 }

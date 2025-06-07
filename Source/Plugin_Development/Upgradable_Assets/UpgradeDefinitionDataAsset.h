@@ -3,20 +3,20 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
-#include "UpgradeLevelData.h"
+#include "UpgradeDataContainers.h"
 #include "UpgradeDefinitionDataAsset.generated.h"
 
 UCLASS()
-class PLUGIN_DEVELOPMENT_API UUpgradeDefinitionDataAsset : public UDataAsset
+class PLUGIN_DEVELOPMENT_API UUpgradeDefinitionDataAsset : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 
 public:
 	// Provide path ID for this upgrade definition (if None, will use asset name)
-	UPROPERTY(EditAnywhere, Category = "Upgrade")
-	FName UpgradePath;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Upgrade System")
+	FName UpgradePathId;
 
-	// Array of upgrade levels
-	UPROPERTY(EditAnywhere, Category = "Upgrade")
-	TArray<FUpgradeLevelDataAsset> Levels;
+	// Each element in this array represents a level of the upgrade path
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Upgrade System")
+	TArray<FUpgradeDefinitionAsset> Levels;
 };

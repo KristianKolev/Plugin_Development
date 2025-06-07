@@ -6,17 +6,16 @@ UUpgradeDataTableProvider::UUpgradeDataTableProvider()
 {
 }
 
-void UUpgradeDataTableProvider::InitializeData(const FString& FilePath, TMap<FName, TArray<FUpgradeLevelData>>& OutCatalog, TArray<FName>& OutResourceTypes)
+void UUpgradeDataTableProvider::InitializeData(const FString& FolderPath, TMap<FName, TArray<FUpgradeDefinition>>& OutCatalog, TArray<FName>& OutResourceTypes)
 {
     
     FAssetRegistryModule& RegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-    TArray<FAssetData> AssetList;
-    RegistryModule.Get().GetAssetsByPath(FName(*FilePath), AssetList, /*bRecursive=*/true);
+    TArray<FAssetData> AssetsInFolder;
+    RegistryModule.Get().GetAssetsByPath(FName(*FolderPath), AssetsInFolder, /*bRecursive=*/true);
 
     int32 LoadedTables = 0;
-    for (const FAssetData& AssetData : AssetList)
+    for (const FAssetData& AssetData : AssetsInFolder)
     {
-        
         if (AssetData.AssetClassPath != UDataTable::StaticClass()->GetClassPathName())
             continue;
 
@@ -29,34 +28,30 @@ void UUpgradeDataTableProvider::InitializeData(const FString& FilePath, TMap<FNa
         ++LoadedTables;
 
         FName PathId = FName(*Table->GetName());
-        TArray<FUpgradeLevelData>& LevelArray = OutCatalog.FindOrAdd(PathId);
+        TArray<FUpgradeDefinition>& LevelArray = OutCatalog.FindOrAdd(PathId);
 
         for (auto& Pair : Table->GetRowMap())
         {
-            FUpgradeLevelDataAsset* LevelAsset = reinterpret_cast<FUpgradeLevelDataAsset*>(Pair.Value);
+            FUpgradeDefinitionAsset* LevelAsset = reinterpret_cast<FUpgradeDefinitionAsset*>(Pair.Value);
             if (!LevelAsset)
             {
                 UE_LOG(LogTemp, Warning, TEXT("Invalid row '%s' in DataTable %s"), *Pair.Key.ToString(), *Table->GetName());
                 continue;
             }
 
-            FUpgradeLevelData LevelData;
+            FUpgradeDefinition LevelData;
             for (const auto& ResourcePair : LevelAsset->UpgradeResourceCosts)
             {
-                // Add the resource type and get its index
                 int32 TypeIdx = AddOrFindRequiredResourceTypeIndex(ResourcePair.Key, OutResourceTypes);
                 LevelData.ResourceTypeIndices.Add(TypeIdx);
                 LevelData.UpgradeCosts.Add(ResourcePair.Value);
             }
-
-            // Set the converted data
+            
             LevelData.UpgradeSeconds = LevelAsset->UpgradeSeconds;
             LevelData.bUpgradeLocked = LevelAsset->bUpgradeLocked;
-            
             LevelArray.Add(LevelData);
         }
     }
-
     UE_LOG(LogTemp, Log, TEXT("UpgradeDataTableProvider: Loaded %d DataTables from '%s' (found %d PathIds)"),
-           LoadedTables, *FilePath, OutCatalog.Num());
+           LoadedTables, *FolderPath, OutCatalog.Num());
 }

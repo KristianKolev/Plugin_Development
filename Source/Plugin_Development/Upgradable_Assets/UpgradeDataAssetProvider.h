@@ -11,9 +11,6 @@ class PLUGIN_DEVELOPMENT_API UUpgradeDataAssetProvider : public UUpgradeDataProv
 	
 public:
 	UUpgradeDataAssetProvider();
-
-
-	virtual void InitializeData(const FString& FilePath, TMap<FName, TArray<FUpgradeLevelData>>& OutCatalog, TArray<FName>& OutResourceTypes) override;
-
+	
+	virtual void InitializeData(const FString& FolderPath, TMap<FName, TArray<FUpgradeDefinition>>& OutCatalog, TArray<FName>& OutResourceTypes) override;
 };
-
