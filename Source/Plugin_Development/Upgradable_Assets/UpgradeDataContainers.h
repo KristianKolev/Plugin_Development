@@ -102,3 +102,4 @@ enum class EUpgradableAspect : uint8
 	Rank,
 	Star
 };
+

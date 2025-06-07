@@ -54,6 +54,53 @@ void UUpgradableComponent::RequestUpgrade(int32 LevelIncrease, const TArray<FNam
 	Server_RequestUpgrade(LevelIncrease, AvailableResourcesNames, AvailableResourceAmounts);
 }
 
+void UUpgradableComponent::ChangeActorVisualsPerUpgradeLevel(int32 Level, UStaticMeshComponent* StaticMeshComponent,
+                                                             USkeletalMeshComponent* SkeletalComponent)
+{
+	if (StaticMeshComponent && LevelUpVisuals->StaticMeshPerLevel.Contains(Level))
+	{
+		StaticMeshComponent->SetStaticMesh(LevelUpVisuals->StaticMeshPerLevel[Level]);
+	
+	}
+
+	if (SkeletalComponent && LevelUpVisuals->SkeletalMeshPerLevel.Contains(Level))
+	{
+		SkeletalComponent->SetSkeletalMesh(LevelUpVisuals->SkeletalMeshPerLevel[Level]);
+	}
+	
+	if (LevelUpVisuals->MaterialSwapsPerLevel.Contains(Level))
+	{
+		const FMaterialSwapList* SwapList = LevelUpVisuals->MaterialSwapsPerLevel.Find(Level);
+		for (const FMaterialSwapInfo& SwapInfo : SwapList->MaterialSwaps)
+		{
+			if (SwapInfo.Material == nullptr || SwapInfo.MaterialSlot < 0)
+				continue;
+
+			switch (SwapInfo.MeshForMaterialSwap)
+			{
+			case EMeshForMaterialSwap::StaticMesh: 
+				if (StaticMeshComponent)
+				{
+					StaticMeshComponent->SetMaterial(
+						SwapInfo.MaterialSlot, SwapInfo.Material);
+				}
+				break;
+
+			case EMeshForMaterialSwap::SkeletalMesh:       
+				if (SkeletalComponent)
+				{
+					SkeletalComponent->SetMaterial(
+						SwapInfo.MaterialSlot, SwapInfo.Material);
+				}
+				break;
+
+			default:
+				break;
+			}
+		}
+	}
+}
+
 bool UUpgradableComponent::Server_RequestUpgrade_Validate(int32 LevelIncrease, const TArray<FName>& AvailableResourcesNames, const TArray<int32>& AvailableResourceAmounts) { return true; }
 
 void UUpgradableComponent::Server_RequestUpgrade_Implementation(int32 LevelIncrease, const TArray<FName>& AvailableResourcesNames, const TArray<int32>& AvailableResourceAmounts)
