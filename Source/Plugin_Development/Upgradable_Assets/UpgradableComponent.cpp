@@ -1,8 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-// Sets default values for this component's properties
 #include "UpgradableComponent.h"
-//#include "Net/UnrealNetwork.h"
 #include "UpgradeManagerSubsystem.h"
 #include "GameFramework/Actor.h"
 
@@ -10,27 +6,26 @@ UUpgradableComponent::UUpgradableComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicatedByDefault(true);
-	LocalLevel = 0;
 }
 
 void UUpgradableComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (GetOwnerRole() == ROLE_Authority)
-	{
+//	if (GetOwnerRole() == ROLE_Authority)
+//	{
 		// Register this component with the subsystem
 		UUpgradeManagerSubsystem* Subsystem = GetWorld()->GetSubsystem<UUpgradeManagerSubsystem>();
 		if (Subsystem)
 		{
 			UpgradableID = Subsystem->RegisterUpgradableComponent(this);
 		}
-	}
+//	}
 }
 
 void UUpgradableComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (GetOwnerRole() == ROLE_Authority && UpgradableID != -1)
+	if (/*GetOwnerRole() == ROLE_Authority && */UpgradableID != -1)
 	{
 		UUpgradeManagerSubsystem* Subsystem = GetWorld()->GetSubsystem<UUpgradeManagerSubsystem>();
 		if (Subsystem)
