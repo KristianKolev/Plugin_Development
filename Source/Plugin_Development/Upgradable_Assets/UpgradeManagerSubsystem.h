@@ -142,7 +142,7 @@ public:
 
 	// Is an upgrade in progress on the component
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Timer")
-	bool IsUpgradeTimerActive(int32 ComponentId) const {return UpgradeTimers.Contains(ComponentId);}
+	bool IsUpgradeTimerActive(int32 ComponentId) const {return UpgradeInProgressData.Contains(ComponentId);}
 
 protected:
 
@@ -167,15 +167,17 @@ protected:
 	// Maps each component ID to the level increase requested by the client.
 	UPROPERTY()
 	TMap<int32, int32> RequestedLevelIncreases;
+
+	// Maps each component ID to the data for their pending upgrade.
+	UPROPERTY()
+	TMap<int32, FUpgradeInProgressData> UpgradeInProgressData;
+
 	
 	/* Stack of free slots to be assigned to new components.
 	* Used to avoid re-allocating memory for new components when de-/registering.
 	*/
 	UPROPERTY()
 	TArray<int32> FreeComponentIndices;
-
-	UPROPERTY()
-	TArray<int32> FreeUpgradeTimerIndices;
 
 	UPROPERTY()
 	FString UpgradeDataFolderPath;

@@ -126,7 +126,7 @@ float UUpgradeManagerSubsystem::StartUpgradeTimer(int32 ComponentId, float Timer
 {
 	FTimerDelegate TimerDelegate;
 	TimerDelegate.BindUFunction(this, FName("OnUpgradeTimerFinished"), ComponentId, TimerDuration);
-	FTimerHandle& TimerHandle = UpgradeTimers.FindOrAdd(ComponentId);
+	FTimerHandle& TimerHandle = UpgradeInProgressData.FindOrAdd(ComponentId).UpgradeTimerHandle;
 	GetWorld()->GetTimerManager().SetTimer(TimerHandle, TimerDelegate, TimerDuration, false);
 	
 	if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
@@ -138,10 +138,10 @@ float UUpgradeManagerSubsystem::StartUpgradeTimer(int32 ComponentId, float Timer
 
 void UUpgradeManagerSubsystem::StopUpgradeTimer(int32 ComponentId)
 {
-	if (FTimerHandle* Handle = UpgradeTimers.Find(ComponentId))
+	if (UpgradeInProgressData.Find(ComponentId))
 	{
-		GetWorld()->GetTimerManager().ClearTimer(*Handle);
-		UpgradeTimers.Remove(ComponentId);
+		FTimerHandle& Handle = UpgradeInProgressData[ComponentId].UpgradeTimerHandle;
+		GetWorld()->GetTimerManager().ClearTimer(Handle);
 	}
 }
 
@@ -151,6 +151,7 @@ void UUpgradeManagerSubsystem::CancelUpgrade(int32 ComponentId)
 	if (Comp && IsUpgradeTimerActive(ComponentId))
 	{
 		StopUpgradeTimer(ComponentId);
+		UpgradeInProgressData.Remove(ComponentId);
 		Comp->OnUpgradeCanceled.Broadcast(GetCurrentLevel(ComponentId));
 	}
 }
@@ -161,17 +162,19 @@ void UUpgradeManagerSubsystem::OnUpgradeTimerFinished(int32 ComponentId)
 
 	if (!GetComponentById(ComponentId)) return;
 
-	const int32 NewLevel = GetCurrentLevel(ComponentId) + RequestedLevelIncreases[ComponentId];   
+	const int32 NewLevel = GetCurrentLevel(ComponentId) + UpgradeInProgressData[ComponentId].RequestedLevelIncrease;   
+	UpgradeInProgressData.Remove(ComponentId);
 	
 	UpdateUpgradeLevel(ComponentId, NewLevel);
 }
 
 float UUpgradeManagerSubsystem::UpdateUpgradeTimer(int32 ComponentId, float DeltaTime)
 {
-	if (FTimerHandle* Handle = UpgradeTimers.Find(ComponentId))
+	if (UpgradeInProgressData.Find(ComponentId))
 	{
+		FTimerHandle& Handle = UpgradeInProgressData[ComponentId].UpgradeTimerHandle;
 		FTimerManager& TimerManager = GetWorld()->GetTimerManager();
-		float TimeRemaining = TimerManager.GetTimerRemaining(*Handle);
+		float TimeRemaining = TimerManager.GetTimerRemaining(Handle);
 		float NewTimeRemaining = FMath::Max(0.f, TimeRemaining + DeltaTime);
 		
 		if (NewTimeRemaining > 0.f)
@@ -191,18 +194,19 @@ float UUpgradeManagerSubsystem::UpdateUpgradeTimer(int32 ComponentId, float Delt
 
 float UUpgradeManagerSubsystem::GetUpgradeTimeRemaining(int32 ComponentId) const
 {
-	if (const FTimerHandle* Handle = UpgradeTimers.Find(ComponentId))
+	if (UpgradeInProgressData.Find(ComponentId))
 	{
-		return GetWorld()->GetTimerManager().GetTimerRemaining(*Handle);
+		const FTimerHandle& Handle = UpgradeInProgressData[ComponentId].UpgradeTimerHandle;
+		return GetWorld()->GetTimerManager().GetTimerRemaining(Handle);
 	}
 	return -1.f;
 }
 
 int32 UUpgradeManagerSubsystem::GetRequestedLevelIncrease(int32 ComponentId) const
 {
-	if (RequestedLevelIncreases.Contains(ComponentId))
+	if ( UpgradeInProgressData.Contains(ComponentId))
 	{
-		return RequestedLevelIncreases[ComponentId];
+		return UpgradeInProgressData[ComponentId].RequestedLevelIncrease;
 	}
 	return -1;
 }
@@ -482,6 +486,8 @@ bool UUpgradeManagerSubsystem::HandleUpgradeRequest(const int32 ComponentId, con
 	if (!CanUpgrade(ComponentId, LevelIncrease, AvailableResources)) return false;
 	RequestedLevelIncreases.Add(ComponentId, LevelIncrease);
 	const float UpgradeDuration = GetUpgradeTimerDuration(ComponentId, LevelIncrease);
+	UpgradeInProgressData.FindOrAdd(ComponentId).TotalUpgradeTime = UpgradeDuration;
+	UpgradeInProgressData.FindOrAdd(ComponentId).RequestedLevelIncrease = LevelIncrease;
 	StartUpgradeTimer(ComponentId, UpgradeDuration);
 
 	return true;

@@ -103,3 +103,19 @@ enum class EUpgradableAspect : uint8
 	Star
 };
 
+USTRUCT(BlueprintType)
+struct PLUGIN_DEVELOPMENT_API FUpgradeInProgressData
+{
+	GENERATED_BODY()
+
+	// Maps each component ID to its upgrade timer.
+	UPROPERTY()
+	FTimerHandle UpgradeTimerHandle;
+
+	UPROPERTY()
+	float TotalUpgradeTime = 0.0f;
+
+	// Maps each component ID to the level increase requested by the client.
+	UPROPERTY()
+	int32 RequestedLevelIncrease = 1;
+};
