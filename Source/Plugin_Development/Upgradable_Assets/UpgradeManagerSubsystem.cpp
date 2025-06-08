@@ -5,6 +5,8 @@
 #include "UpgradeDataTableProvider.h"
 #include "UpgradeJsonProvider.h"
 #include "UpgradeSettings.h"
+#include "TimerManager.h"
+#include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "Windows/WindowsApplication.h"
 
@@ -44,6 +46,7 @@ void UUpgradeManagerSubsystem::InitializeProvider()
 	default:
 		DataProvider = nullptr;
 		UpgradeDataFolderPath = TEXT("INVALID PATH");
+		UE_LOG(LogTemp, Warning, TEXT("[UPGRADECATALOG_ERR_01] Invalid catalog source"));
 		break;
 	}
 }
@@ -57,11 +60,153 @@ void UUpgradeManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 
 void UUpgradeManagerSubsystem::LoadCatalog()
 {
-	if (!DataProvider)
-		return;
-	
+	if (!DataProvider)	return;
+	UpgradeCatalog.Empty();
 	DataProvider->InitializeData(UpgradeDataFolderPath, UpgradeCatalog, ResourceTypes);
 }
+
+int32 UUpgradeManagerSubsystem::RegisterUpgradableComponent(UUpgradableComponent* Component)
+{
+	int32 Id;
+	if (FreeComponentIndices.Num() > 0)
+	{
+		// Reuse the last hole
+		Id = FreeComponentIndices.Pop(/*bAllowShrinking=*/false);
+		RegisteredComponents[Id] = Component;
+		ComponentLevels[Id] = Component->InitialLevel;
+	}
+	else
+	{
+		// No holes—grow the array
+		Id = RegisteredComponents.Add(Component);
+		ComponentLevels.Add(Component->InitialLevel);
+	}
+
+	return Id;
+}
+
+void UUpgradeManagerSubsystem::UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel)
+{
+	if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
+	{
+		ComponentLevels[ComponentId] = NewLevel;
+		Comp->Client_SetLevel(NewLevel);
+	}
+}
+
+void UUpgradeManagerSubsystem::UnregisterUpgradableComponent(const int32 ComponentId)
+{
+	if (RegisteredComponents.IsValidIndex(ComponentId))
+	{
+		if (IsUpgradeTimerActive(ComponentId))
+		{
+			CancelUpgrade(ComponentId);
+		}
+		RegisteredComponents[ComponentId].Reset();    // Clear the weak ptr
+		FreeComponentIndices.Add(ComponentId);                // Remember this slot as a hole
+		ComponentLevels[ComponentId] = -1;           // Mark as unused 
+	}
+}
+
+float UUpgradeManagerSubsystem::GetUpgradeTimerDuration(int32 ComponentId, int32 LevelIncrease) const
+{
+	float UpgradeTime = 0.0f;
+	for ( int32 i = 0; i < LevelIncrease; ++i )
+	{
+		const FUpgradeDefinition* UpgradeDefinition = GetUpgradeDefinitionForLevel(ComponentId, GetNextLevel(ComponentId) + i);
+		if (UpgradeDefinition)
+		{
+			UpgradeTime += UpgradeDefinition->UpgradeSeconds;
+		}
+	}
+	return UpgradeTime;
+}
+
+float UUpgradeManagerSubsystem::StartUpgradeTimer(int32 ComponentId, float TimerDuration)
+{
+	FTimerDelegate TimerDelegate;
+	TimerDelegate.BindUFunction(this, FName("OnUpgradeTimerFinished"), ComponentId, TimerDuration);
+	FTimerHandle& TimerHandle = UpgradeTimers.FindOrAdd(ComponentId);
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, TimerDelegate, TimerDuration, false);
+	
+	if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
+	{
+		Comp->OnUpgradeStarted.Broadcast(TimerDuration);
+	}
+	return TimerDuration;
+}
+
+void UUpgradeManagerSubsystem::StopUpgradeTimer(int32 ComponentId)
+{
+	if (FTimerHandle* Handle = UpgradeTimers.Find(ComponentId))
+	{
+		GetWorld()->GetTimerManager().ClearTimer(*Handle);
+		UpgradeTimers.Remove(ComponentId);
+	}
+}
+
+void UUpgradeManagerSubsystem::CancelUpgrade(int32 ComponentId)
+{
+	UUpgradableComponent* Comp = GetComponentById(ComponentId);
+	if (Comp && IsUpgradeTimerActive(ComponentId))
+	{
+		StopUpgradeTimer(ComponentId);
+		Comp->OnUpgradeCanceled.Broadcast(GetCurrentLevel(ComponentId));
+	}
+}
+
+void UUpgradeManagerSubsystem::OnUpgradeTimerFinished(int32 ComponentId)
+{
+	StopUpgradeTimer(ComponentId);
+
+	if (!GetComponentById(ComponentId)) return;
+
+	const int32 NewLevel = GetCurrentLevel(ComponentId) + RequestedLevelIncreases[ComponentId];   
+	
+	UpdateUpgradeLevel(ComponentId, NewLevel);
+}
+
+float UUpgradeManagerSubsystem::UpdateUpgradeTimer(int32 ComponentId, float DeltaTime)
+{
+	if (FTimerHandle* Handle = UpgradeTimers.Find(ComponentId))
+	{
+		FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+		float TimeRemaining = TimerManager.GetTimerRemaining(*Handle);
+		float NewTimeRemaining = FMath::Max(0.f, TimeRemaining + DeltaTime);
+		
+		if (NewTimeRemaining > 0.f)
+		{
+			StopUpgradeTimer(ComponentId);
+			StartUpgradeTimer(ComponentId, NewTimeRemaining);
+			return NewTimeRemaining;
+		}
+		else
+		{
+			OnUpgradeTimerFinished(ComponentId);
+			return -1.f;
+		}
+	}
+	return -1.f;
+}
+
+float UUpgradeManagerSubsystem::GetUpgradeTimeRemaining(int32 ComponentId) const
+{
+	if (const FTimerHandle* Handle = UpgradeTimers.Find(ComponentId))
+	{
+		return GetWorld()->GetTimerManager().GetTimerRemaining(*Handle);
+	}
+	return -1.f;
+}
+
+int32 UUpgradeManagerSubsystem::GetRequestedLevelIncrease(int32 ComponentId) const
+{
+	if (RequestedLevelIncreases.Contains(ComponentId))
+	{
+		return RequestedLevelIncreases[ComponentId];
+	}
+	return -1;
+}
+
 
 UUpgradableComponent* UUpgradeManagerSubsystem::GetComponentById(const int32 Id) const
 {
@@ -263,6 +408,7 @@ int32 UUpgradeManagerSubsystem::GetNextLevelUpgradeTime(const int32 ComponentId)
 	return SecondsForUpgrade;
 }
 
+
 const TArray<FUpgradeDefinition>* UUpgradeManagerSubsystem::GetUpgradeDefinitions(FName UpgradePathId) const
 {
 	return UpgradeCatalog.Find(UpgradePathId);
@@ -282,44 +428,6 @@ const FUpgradeDefinition* UUpgradeManagerSubsystem::GetUpgradeDefinitionForLevel
 	return &(*UpgradeDefinitions)[Level];
 }
 
-int32 UUpgradeManagerSubsystem::RegisterUpgradableComponent(UUpgradableComponent* Component)
-{
-	int32 Id;
-	if (FreeIndices.Num() > 0)
-	{
-		// Reuse the last hole
-		Id = FreeIndices.Pop(/*bAllowShrinking=*/false);
-		RegisteredComponents[Id] = Component;
-		ComponentLevels[Id] = Component->InitialLevel;
-	}
-	else
-	{
-		// No holes—grow the array
-		Id = RegisteredComponents.Add(Component);
-		ComponentLevels.Add(Component->InitialLevel);
-	}
-
-	return Id;
-}
-
-void UUpgradeManagerSubsystem::UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel)
-{
-	if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
-	{
-		ComponentLevels[ComponentId] = NewLevel;
-		Comp->Client_SetLevel(NewLevel);
-	}
-}
-
-void UUpgradeManagerSubsystem::UnregisterUpgradableComponent(const int32 ComponentId)
-{
-	if (RegisteredComponents.IsValidIndex(ComponentId))
-	{
-		RegisteredComponents[ComponentId].Reset();    // Clear the weak ptr
-		FreeIndices.Add(ComponentId);                // Remember this slot as a hole
-		ComponentLevels[ComponentId] = -1;           // Mark as unused 
-	}
-}
 
 
 
@@ -328,6 +436,9 @@ bool UUpgradeManagerSubsystem::CanUpgrade(const int32 ComponentId, const int32 L
 	bool Success = false;
 	
 	if (!GetComponentById(ComponentId)) return false;
+	// Future implementation idea: Add upgrade queue to chain multiple upgrades
+	if (IsUpgradeTimerActive(ComponentId)) return false;
+	
 	if (LevelIncrease <= 0) return false;
 	// Trying to upgrade to a level higher than the max level
 	if (GetCurrentLevel(ComponentId) + LevelIncrease > GetMaxLevel(ComponentId)) return false;
@@ -335,8 +446,8 @@ bool UUpgradeManagerSubsystem::CanUpgrade(const int32 ComponentId, const int32 L
 	if (const TArray<FUpgradeDefinition>* UpgradeDefinitions = GetUpgradeDefinitions(ComponentId))
 	{
 		const FUpgradeDefinition* LevelData = &(*UpgradeDefinitions)[GetCurrentLevel(ComponentId)];
-		// Future implementation idea: Add upgrade queue to chain multiple upgrades
-		if (LevelData->bUpgrading) return false;
+		
+		
 		TMap<FName, int32> TotalResourceCosts;
 		// Iterate over all levels if trying to upgrade several levels at once
 		for (int32 i = GetCurrentLevel(ComponentId); i < GetCurrentLevel(ComponentId) + LevelIncrease; ++i)
@@ -368,17 +479,10 @@ bool UUpgradeManagerSubsystem::CanUpgrade(const int32 ComponentId, const int32 L
 
 bool UUpgradeManagerSubsystem::HandleUpgradeRequest(const int32 ComponentId, const int32 LevelIncrease, const TMap<FName, int32>& AvailableResources)
 {
-	const UUpgradableComponent* Comp = GetComponentById(ComponentId);
-	if (!Comp/* || !Comp->GetOwner()->HasAuthority()*/) return false;
-
-	const int32 CurrentLevel = ComponentLevels[ComponentId];
-	if (!ComponentLevels.IsValidIndex(ComponentId) || ComponentLevels[ComponentId] == -1) return false;	  // not registered
-	const TArray<FUpgradeDefinition>* UpgradeDefinitions = GetUpgradeDefinitions(ComponentId);
-	if (!UpgradeDefinitions || CurrentLevel >= UpgradeDefinitions->Num()-1) return false;
-	
 	if (!CanUpgrade(ComponentId, LevelIncrease, AvailableResources)) return false;
-	const int32 NewLevel = GetCurrentLevel(ComponentId) + LevelIncrease;   
-	
-	UpdateUpgradeLevel(ComponentId, NewLevel);
+	RequestedLevelIncreases.Add(ComponentId, LevelIncrease);
+	const float UpgradeDuration = GetUpgradeTimerDuration(ComponentId, LevelIncrease);
+	StartUpgradeTimer(ComponentId, UpgradeDuration);
+
 	return true;
 }

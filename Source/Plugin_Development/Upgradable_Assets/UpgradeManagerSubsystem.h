@@ -26,10 +26,11 @@ public:
 	void InitializeProvider();
 	int32 RegisterUpgradableComponent(UUpgradableComponent* Component);
 	void UnregisterUpgradableComponent(int32 ComponentId);
-
-	bool CanUpgrade(int32 ComponentId, int32 LevelIncrease, const TMap<FName, int32>& AvailableResources) const;
+	
 	bool HandleUpgradeRequest(int32 ComponentId, int32 LevelIncrease, const TMap<FName, int32>& AvailableResources);
-
+	bool CanUpgrade(int32 ComponentId, int32 LevelIncrease, const TMap<FName, int32>& AvailableResources) const;
+	void UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel);
+	
 	/** Gets an upgradable component by its unique ID */
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Status")
 	UUpgradableComponent* GetComponentById(int32 Id) const;
@@ -106,35 +107,75 @@ public:
 	/** Retrieves upgrade data for a specific level */
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Status")
 	void GetUpgradeDataForLevel(int32 ComponentId, int32 Level, FUpgradeDefinition& LevelData) const { LevelData = *GetUpgradeDefinitionForLevel(ComponentId, Level);};
+
+	/**
+	 * @return - -1 if no upgrade is in progress
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Status")
+	int32 GetRequestedLevelIncrease(int32 ComponentId) const ;
 	
-	/** Get existing or add new resource type, return index */
+	/** Get the index from the encountered resources array for the specified resource type from the */
 	UFUNCTION(BlueprintCallable, Category="Upgrade System|Resources")
 	int32 GetResourceTypeIndex(const FName& TypeName) const;
 
-	/** Gets the resource type name for the specified index */
+	/** Gets the resource type name for the specified index of the encountered resources array */
 	UFUNCTION(BlueprintCallable, Category="Upgrade System|Resources")
 	FName GetResourceTypeName(int32 Index) const;
+	
+	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Timer")
+	void CancelUpgrade(int32 ComponentId);
+	
+	/**
+	 * Updates the upgrade timer for the specified component by the specified amount of time.
+	 
+	 * @param DeltaTime - Increase or reduce the timer by this amount of seconds.
+	 * @return - The remaining time until completion or -1.f if the upgrade was completed.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Timer")
+	float UpdateUpgradeTimer(int32 ComponentId, float DeltaTime);
+	
+	/**
+	 * @return - -1 if no upgrade is in progress
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Timer")
+	float GetUpgradeTimeRemaining(int32 ComponentId) const;
+
+	// Is an upgrade in progress on the component
+	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Timer")
+	bool IsUpgradeTimerActive(int32 ComponentId) const {return UpgradeTimers.Contains(ComponentId);}
 
 protected:
 
-	// Catalog: Map path ID -> definition levels
+	// Catalog of each Upgrade Path and its corresponding level progression.
 	TMap<FName, TArray<FUpgradeDefinition>> UpgradeCatalog;
-
-	// In your subsystem header:
+	
 	UPROPERTY()
 	TArray<TWeakObjectPtr<UUpgradableComponent>> RegisteredComponents;
 	
-	// Maps component-ID → current, authoritative level.
+	// Stores the current level of each component ID.
 	UPROPERTY()
 	TArray<int32> ComponentLevels;		
 
-	/** List of all available resource types in the system */
+	/** List of all available resource types in the system as encountered in the catalog.*/
 	UPROPERTY(BlueprintReadOnly, Category = "Upgrade System|Resources")
 	TArray<FName> ResourceTypes;
-	
-	// Stack of free slots:
+
+	// Maps each component ID to its upgrade timer.
 	UPROPERTY()
-	TArray<int32> FreeIndices;
+	TMap<int32, FTimerHandle> UpgradeTimers;
+
+	// Maps each component ID to the level increase requested by the client.
+	UPROPERTY()
+	TMap<int32, int32> RequestedLevelIncreases;
+	
+	/* Stack of free slots to be assigned to new components.
+	* Used to avoid re-allocating memory for new components when de-/registering.
+	*/
+	UPROPERTY()
+	TArray<int32> FreeComponentIndices;
+
+	UPROPERTY()
+	TArray<int32> FreeUpgradeTimerIndices;
 
 	UPROPERTY()
 	FString UpgradeDataFolderPath;
@@ -145,10 +186,17 @@ protected:
 	// Loaders
 	void LoadCatalog();
 
+	// Upgrade Timer functions
+	float GetUpgradeTimerDuration(int32 ComponentId, int32 LevelIncrease) const;
+	float StartUpgradeTimer(int32 ComponentId, float TimerDuration);
+	void StopUpgradeTimer(int32 ComponentId);
+	UFUNCTION()
+	void OnUpgradeTimerFinished(int32 ComponentId);
+	
 	// Helpers
 	void CleanupFreeIndices();
 
-	void UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel);
+
 	const TArray<FUpgradeDefinition>* GetUpgradeDefinitions(FName UpgradePathId) const;
 	const TArray<FUpgradeDefinition>* GetUpgradeDefinitions(int32 ComponentId) const;
 	const FUpgradeDefinition* GetUpgradeDefinitionForLevel(int32 ComponentId, int32 Level) const;
