@@ -175,8 +175,12 @@ float UUpgradeManagerSubsystem::UpdateUpgradeTimer(int32 ComponentId, float Delt
 		FTimerHandle& Handle = UpgradeInProgressData[ComponentId].UpgradeTimerHandle;
 		FTimerManager& TimerManager = GetWorld()->GetTimerManager();
 		float TimeRemaining = TimerManager.GetTimerRemaining(Handle);
-		float NewTimeRemaining = FMath::Max(0.f, TimeRemaining + DeltaTime);
+		float NewTimeRemaining = FMath::Max(0.f, FMath::FloorToInt(TimeRemaining + DeltaTime));
 		
+		if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
+		{
+			Comp->OnTimeToUpgradeChanged.Broadcast(DeltaTime);
+		}
 		if (NewTimeRemaining > 0.f)
 		{
 			StopUpgradeTimer(ComponentId);
@@ -188,6 +192,7 @@ float UUpgradeManagerSubsystem::UpdateUpgradeTimer(int32 ComponentId, float Delt
 			OnUpgradeTimerFinished(ComponentId);
 			return -1.f;
 		}
+
 	}
 	return -1.f;
 }

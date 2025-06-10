@@ -54,22 +54,22 @@ void UUpgradeTimerDisplay::HandleTimeToUpgradeChanged_Implementation(float Delta
 	RemainingTime += DeltaTime;
 
 	
-	if (RemainingTime <= 0.f)
-	{
-		CountdownText->SetText(FText::AsNumber(0.f));
-		UpgradeProgress->SetPercent(1.f);
-		
-	}
-	else
+	if (RemainingTime > 0.f)
 	{
 		const float ElapsedTime = TotalTime - RemainingTime; 
 		UpgradeProgress->SetPercent(ElapsedTime / TotalTime);
+	}
+	else
+	{
+		CountdownText->SetText(FText::AsNumber(0.f));
+		UpgradeProgress->SetPercent(1.f);
 	}
 }
 
 void UUpgradeTimerDisplay::HandleLevelChanged_Implementation(int32 OldLevel, int32 NewLevel)
 {
 	StopCountdownTimer();
+	CountdownText->SetText(FText::AsNumber(0.f));
 	TotalTime = -1.f;
 	RemainingTime = -1.f;
 	LevelText->SetText(FText::AsNumber(NewLevel));
