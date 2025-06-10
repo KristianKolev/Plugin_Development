@@ -125,7 +125,7 @@ float UUpgradeManagerSubsystem::GetUpgradeTimerDuration(int32 ComponentId, int32
 float UUpgradeManagerSubsystem::StartUpgradeTimer(int32 ComponentId, float TimerDuration)
 {
 	FTimerDelegate TimerDelegate;
-	TimerDelegate.BindUFunction(this, FName("OnUpgradeTimerFinished"), ComponentId, TimerDuration);
+	TimerDelegate.BindUFunction(this, FName("OnUpgradeTimerFinished"), ComponentId);
 	FTimerHandle& TimerHandle = UpgradeInProgressData.FindOrAdd(ComponentId).UpgradeTimerHandle;
 	GetWorld()->GetTimerManager().SetTimer(TimerHandle, TimerDelegate, TimerDuration, false);
 	

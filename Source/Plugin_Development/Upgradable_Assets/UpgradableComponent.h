@@ -9,8 +9,9 @@
 #include "UpgradableComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnLevelChangedDelegate, int32, OldLevel, int32, NewLevel);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUpgradeStartedDelegate, int32, SecondsUntilCompleted);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUpgradeStartedDelegate, float, SecondsUntilCompleted);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUpgradeCanceledDelegate, int32, CurrentLevel);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTimeToUpgradeChangedDelegate, float, DeltaTime);
 
 UCLASS( ClassGroup=(Custom), Blueprintable, meta=(BlueprintSpawnableComponent) )
 class PLUGIN_DEVELOPMENT_API UUpgradableComponent : public UActorComponent
@@ -29,6 +30,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Upgradable Component")
 	FOnUpgradeCanceledDelegate OnUpgradeCanceled;
+
+	UPROPERTY(BlueprintAssignable, Category = "Upgradable Component")
+	FOnTimeToUpgradeChangedDelegate OnTimeToUpgradeChanged;
 	
 	// Unique identifier for this upgrade path
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Upgradable Component")
