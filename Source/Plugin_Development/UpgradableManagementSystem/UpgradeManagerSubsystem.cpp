@@ -207,7 +207,16 @@ float UUpgradeManagerSubsystem::GetUpgradeTimeRemaining(int32 ComponentId) const
 	return -1.f;
 }
 
-int32 UUpgradeManagerSubsystem::GetRequestedLevelIncrease(int32 ComponentId) const
+float UUpgradeManagerSubsystem::GetInProgressTotalUpgradeTime(int32 ComponentId) const
+{
+	if (UpgradeInProgressData.Contains(ComponentId))
+	{
+		return UpgradeInProgressData[ComponentId].TotalUpgradeTime;
+	}
+	return -1.f;
+}
+
+int32 UUpgradeManagerSubsystem::GetInProgressLevelIncrease(int32 ComponentId) const
 {
 	if ( UpgradeInProgressData.Contains(ComponentId))
 	{
@@ -396,6 +405,15 @@ FName UUpgradeManagerSubsystem::GetResourceTypeName(const int32 Index) const
 			: NAME_None;
 }
 
+TMap<FName, int32> UUpgradeManagerSubsystem::GetInProgressTotalResourceCost(int32 ComponentId) const
+{
+	if (UpgradeInProgressData.Contains(ComponentId))
+	{
+		return UpgradeInProgressData[ComponentId].UpgradeResourceCost;
+	}
+	return TMap<FName, int32>();
+}
+
 void UUpgradeManagerSubsystem::GetNextLevelUpgradeCosts(const int32 ComponentId, TMap<FName, int32>& ResourceCosts) const
 {
 	if (const FUpgradeDefinition* UpgradeDefinition = GetUpgradeDefinitionForLevel(ComponentId, GetNextLevel(ComponentId)))
@@ -489,11 +507,18 @@ bool UUpgradeManagerSubsystem::CanUpgrade(const int32 ComponentId, const int32 L
 bool UUpgradeManagerSubsystem::HandleUpgradeRequest(const int32 ComponentId, const int32 LevelIncrease, const TMap<FName, int32>& AvailableResources)
 {
 	if (!CanUpgrade(ComponentId, LevelIncrease, AvailableResources)) return false;
-	RequestedLevelIncreases.Add(ComponentId, LevelIncrease);
 	const float UpgradeDuration = GetUpgradeTimerDuration(ComponentId, LevelIncrease);
-	UpgradeInProgressData.FindOrAdd(ComponentId).TotalUpgradeTime = UpgradeDuration;
-	UpgradeInProgressData.FindOrAdd(ComponentId).RequestedLevelIncrease = LevelIncrease;
-	StartUpgradeTimer(ComponentId, UpgradeDuration);
+
+	if (UpgradeDuration > 0.f)
+	{
+		UpgradeInProgressData.FindOrAdd(ComponentId).TotalUpgradeTime = UpgradeDuration;
+		UpgradeInProgressData.FindOrAdd(ComponentId).RequestedLevelIncrease = LevelIncrease;
+		StartUpgradeTimer(ComponentId, UpgradeDuration);
+	}
+	else
+	{
+		UpdateUpgradeLevel(ComponentId, GetCurrentLevel(ComponentId) + LevelIncrease);
+	}
 
 	return true;
 }

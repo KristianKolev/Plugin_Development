@@ -14,3 +14,4 @@ FString UMightyraiderFunctionLibrary::GetProjectVersion()
 	);
 	return AppVersion;
 }
+

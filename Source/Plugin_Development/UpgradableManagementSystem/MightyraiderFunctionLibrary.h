@@ -17,7 +17,4 @@ class PLUGIN_DEVELOPMENT_API UMightyraiderFunctionLibrary : public UBlueprintFun
 	/* Display the Project version number */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game Config")
 	static FString GetProjectVersion();
-
-	
-	
 };

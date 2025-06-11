@@ -72,4 +72,6 @@ protected:
 	float RemainingTime = 0.f;
 	UPROPERTY()
 	float CountdownTimerRate = 0.f;
+
+	
 };

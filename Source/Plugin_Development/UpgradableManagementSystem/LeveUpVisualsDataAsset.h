@@ -62,7 +62,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Upgrade System")
 	TMap<int32, USkeletalMesh*> SkeletalMeshPerLevel;
 
-	// Automatically applied if using UpgradableComponent's ChangeActorVisualsPerUpgradeLevel function
+	/**
+	 * Automatically applied if using UpgradableComponent's ChangeActorVisualsPerUpgradeLevel function
+	 * Map each level to an array of material swaps to apply.
+	*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Upgrade System")
 	TMap<int32, FMaterialSwapList> MaterialSwapsPerLevel;
 

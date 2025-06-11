@@ -2,6 +2,7 @@
 
 
 #include "UpgradeTimerDisplay.h"
+#include "MightyraiderFunctionLibrary.h"
 
 
 void UUpgradeTimerDisplay::NativeConstruct()
@@ -19,7 +20,7 @@ void UUpgradeTimerDisplay::NativeConstruct()
 
 void UUpgradeTimerDisplay::HandleUpgradeStarted_Implementation(float SecondsUntilCompleted)
 {
-	CountdownText->SetText(FText::AsNumber(SecondsUntilCompleted));
+	
 	if (CountdownHandle.IsValid())
 	{
 		StopCountdownTimer();
@@ -30,6 +31,17 @@ void UUpgradeTimerDisplay::HandleUpgradeStarted_Implementation(float SecondsUnti
 		TotalTime = SecondsUntilCompleted;
 		RemainingTime = SecondsUntilCompleted;
 	}
+	
+	if (RemainingTime < 60.f)
+	{
+		CountdownText->SetText(FText::AsNumber(RemainingTime));
+	}
+	else
+	{
+		FTimespan Timespan = FTimespan::FromSeconds(RemainingTime);
+		CountdownText->SetText(FText::AsTimespan(Timespan));
+	}
+	
 	StartCountdownTimer();
 }
 
@@ -70,9 +82,12 @@ void UUpgradeTimerDisplay::HandleLevelChanged_Implementation(int32 OldLevel, int
 {
 	StopCountdownTimer();
 	CountdownText->SetText(FText::AsNumber(0.f));
+	LevelText->SetText(FText::AsNumber(NewLevel));
+	UpgradeProgress->SetPercent(0.f);
 	TotalTime = -1.f;
 	RemainingTime = -1.f;
-	LevelText->SetText(FText::AsNumber(NewLevel));
+
+	
 }
 
 void UUpgradeTimerDisplay::StartCountdownTimer()
@@ -96,16 +111,26 @@ void UUpgradeTimerDisplay::UpdateCountdownText()
 {
 
 	RemainingTime -= CountdownTimerRate;
-	
-	CountdownText->SetText(FText::AsNumber(RemainingTime));
 	const float ElapsedTime = TotalTime - RemainingTime; 
 	UpgradeProgress->SetPercent(ElapsedTime / TotalTime);
 	
-	if (RemainingTime < 10.f && (CountdownTimerRate - 0.1f > KINDA_SMALL_NUMBER) )
+	if (RemainingTime <= 60.f)
 	{
-		StopCountdownTimer();
-		StartCountdownTimer();
+		CountdownText->SetText(FText::AsNumber(RemainingTime));
+		if (RemainingTime < 10.f && (CountdownTimerRate - 0.1f > KINDA_SMALL_NUMBER) )
+		{
+			StopCountdownTimer();
+			StartCountdownTimer();
+		}
 	}
+	else
+	{
+		FTimespan Timespan = FTimespan::FromSeconds(RemainingTime);
+		CountdownText->SetText(FText::AsTimespan(Timespan));
+	}
+	
+	
+	
 }
 
 void UUpgradeTimerDisplay::StopCountdownTimer()

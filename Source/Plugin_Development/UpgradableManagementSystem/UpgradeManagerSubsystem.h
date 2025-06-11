@@ -95,15 +95,7 @@ public:
 	/** Returns the maximum level achievable for the component */
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Status")
 	int32 GetMaxLevel(int32 ComponentId) const;
-
-	/** Retrieves the resource costs required for the next level upgrade */
-	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Status")
-	void GetNextLevelUpgradeCosts(int32 ComponentId, TMap<FName, int32>& ResourceCosts) const;
-
-	/** Gets the time required for the next level upgrade */
-	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Status")
-	int32 GetNextLevelUpgradeTime(const int32 ComponentId) const ;
-
+	
 	/** Retrieves upgrade data for a specific level */
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Status")
 	void GetUpgradeDataForLevel(int32 ComponentId, int32 Level, FUpgradeDefinition& LevelData) const { LevelData = *GetUpgradeDefinitionForLevel(ComponentId, Level);};
@@ -112,7 +104,7 @@ public:
 	 * @return - -1 if no upgrade is in progress
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Status")
-	int32 GetRequestedLevelIncrease(int32 ComponentId) const ;
+	int32 GetInProgressLevelIncrease(int32 ComponentId) const ;
 	
 	/** Get the index from the encountered resources array for the specified resource type from the */
 	UFUNCTION(BlueprintCallable, Category="Upgrade System|Resources")
@@ -121,10 +113,19 @@ public:
 	/** Gets the resource type name for the specified index of the encountered resources array */
 	UFUNCTION(BlueprintCallable, Category="Upgrade System|Resources")
 	FName GetResourceTypeName(int32 Index) const;
+	/** Retrieves the resource costs required for the next level upgrade */
+	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Resources")
+	void GetNextLevelUpgradeCosts(int32 ComponentId, TMap<FName, int32>& ResourceCosts) const;
+	// Not implemented yet. Use GetNextLevelUpgradeCosts
+	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Resources")
+	TMap<FName, int32> GetInProgressTotalResourceCost(int32 ComponentId) const;
 	
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Timer")
 	void CancelUpgrade(int32 ComponentId);
-	
+
+	/** Gets the time required for the next level upgrade */
+	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Timer")
+	int32 GetNextLevelUpgradeTime(const int32 ComponentId) const ;
 	/**
 	 * Updates the upgrade timer for the specified component by the specified amount of time.
 	 
@@ -139,6 +140,9 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Timer")
 	float GetUpgradeTimeRemaining(int32 ComponentId) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Timer")
+	float GetInProgressTotalUpgradeTime(int32 ComponentId) const;
 
 	// Is an upgrade in progress on the component
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Timer")
@@ -160,14 +164,6 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Upgrade System|Resources")
 	TArray<FName> ResourceTypes;
 
-	// Maps each component ID to its upgrade timer.
-	UPROPERTY()
-	TMap<int32, FTimerHandle> UpgradeTimers;
-
-	// Maps each component ID to the level increase requested by the client.
-	UPROPERTY()
-	TMap<int32, int32> RequestedLevelIncreases;
-
 	// Maps each component ID to the data for their pending upgrade.
 	UPROPERTY()
 	TMap<int32, FUpgradeInProgressData> UpgradeInProgressData;
@@ -187,6 +183,11 @@ protected:
 
 	// Loaders
 	void LoadCatalog();
+
+	// Resource functions
+	
+	// Not implemented. Primary usecases focus on 1 level upgrade at a time.
+	TMap<FName, int32> GetUpgradeTotalResourceCost (int32 ComponentId, int32 LevelIncrease) const;
 
 	// Upgrade Timer functions
 	float GetUpgradeTimerDuration(int32 ComponentId, int32 LevelIncrease) const;

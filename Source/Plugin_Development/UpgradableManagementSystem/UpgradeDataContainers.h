@@ -107,7 +107,10 @@ USTRUCT(BlueprintType)
 struct PLUGIN_DEVELOPMENT_API FUpgradeInProgressData
 {
 	GENERATED_BODY()
-
+	
+	UPROPERTY()
+	TMap<FName, int32> UpgradeResourceCost = {};
+	
 	// Maps each component ID to its upgrade timer.
 	UPROPERTY()
 	FTimerHandle UpgradeTimerHandle;
@@ -118,4 +121,6 @@ struct PLUGIN_DEVELOPMENT_API FUpgradeInProgressData
 	// Maps each component ID to the level increase requested by the client.
 	UPROPERTY()
 	int32 RequestedLevelIncrease = 1;
+
+
 };
