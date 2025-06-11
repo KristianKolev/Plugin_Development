@@ -1,22 +1,75 @@
-# Plugin_Development
-Project to develop and test custom Unreal Engine gameplay plugins.
+# Plugin Development Suite
 
-Plugins are developed in C++.
+A modular framework for prototyping, testing, and packaging Unreal Engine gameplay plugins.
 
-## Active development
-Currently working on:
-Upgradable system plugin - add an actor component that interacts with an upgradable subsystem to give any actor level upgrade functionality.
-Resource management system.
+**Status**: WIP — actively evolving components and subsystems.
 
-## Upgradable Assets system
+---
 
-Drop component onto any Actor to give it "Upgradable" functionality.
-Load upgrade definitions as Json, DataTables or DataAssets - in Editor Preferences-> Upgrade System Settings
-Modify Enums in "UpgradeLevelData.h" to contain your desired naming for Upgrade aspect (Level, tier, rank, etc.) and Upgrade Category (Unit, Equipment, Builging). These are then used for querying insisde BPs.
-Custom UI widget to countodown the upgrade progress.
+## Project Structure
+
+* **Plugins_Development/**: each feature lives in its own plugin directory.
+* **Content/**: sample maps, assets, and data for demonstration and testing.
+
+---
+
+## Active Plugins
+
+### Upgradable System
+
+A data‑driven upgrade framework that lets any actor gain leveling, ranking, or tiered progression:
+
+* **Component + Subsystem**: drop `UUpgradableComponent` onto actors; `UUpgradeManagerSubsystem` handles level state, validation, and timers.
+* **Flexible Data Providers**: choose JSON, DataTable folder, or DataAsset folder in project settings.
+* **Dynamic Resource Interning**: at runtime, any `FName` resource type is interned into a shared array for minimal memory and fast lookups.
+* **Enum‑driven**: extend `EUpgradableAspect` to add your custom upgrade progression types (e.g. Level, Tier, Rank). Extend `EUpgradableCategopry` e.g. Unit, Building, Equipment.
+* **Blueprint & C++ API**: high‑level calls such as `RequestUpgradeForActor`, `GetUpgradeLevelForActor`, or batch queries by aspect or path.
+* **UMG Integration**: customizable progress bar and countdown widget driven by timelines.
+
+### Resource Management (Upcoming)
+
+* Currency system
+* Integration hooks for upgrade cost deduction and refunds
+* Event‑based notifications
+  
+---
+
+## Configuration
+
+Open **Project Settings → Upgrade System Settings** to select your data source and containing folder.
+
+1. **JSON files**: each file defines an `UpgradePath` (e.g. BasicUnit, AdvancedBuilding, Ring) and a `levels` array with resource costs, upgrade durations, and locked status.
+2. **DataTables**: `UpgradePath` should be the table's name and each row struct (`FUpgradeDefinition`) represents one level.
+3. **DataAssets**: Defines `UpgradePath` and `TArray<FUpgradeDefinition>`
+4. **DataAsset**: `UOnLevelUpVisualsDataAsset` bundles meshes, materials, and niagara systems that can be applied through `UUpgradableComponent::ChangeActorVisualsPerUpgradeLevel` in BP to change the visual appearance of an actor as it levels up.
+
+Upgrade data definitions populate the central catalog (`UpgradePathId → TArray<FUpgradeDefinition>`) and the resource name table.
+
+---
+
+## System Architecture & Usage
+
+1. **Attach Component**: add `UUpgradableComponent`, set `UpgradePathId` and `InitialLevel`.
+2. **Register**: on `BeginPlay`, the component registers with the subsystem, which stores initial level in a protected map.
+3. **Request Upgrade**: The UpgradeManagerSubsystem exposes functions to BPs. For any given component, you only need to cache its ID and can then operate on it through the subsystems API.
+4. **Delegates**: There are several delegate to hook into that are defined on the `UUpgradableComponent`.
+5. **Queries**: use subsystem methods to retrieve all components by aspect or category, filter by current level, or fetch next‑level costs and upgrade durations.
 
 
-### Planed improvements
+---
 
-Multiplayer support
-More Data-oriented optimizations
+## Roadmap
+
+* Core upgradable system — completed
+* Visual countdown & progress widget — completed
+* Resource management & inventory plugin — in progress
+* Data‑oriented performance tuning — in progress
+* Multiplayer replication authority — planned
+
+
+---
+
+## License & Contributions
+
+See [LICENSE.md](LICENSE.md) for license terms. Contributions welcome via issues and pull requests on GitHub.
+
