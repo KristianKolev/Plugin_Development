@@ -71,5 +71,5 @@ Upgrade data definitions populate the central catalog (`UpgradePathId → TArray
 
 ## License & Contributions
 
-See [LICENSE.md](LICENSE.md) for license terms. Contributions welcome via issues and pull requests on GitHub.
+See [LICENSE](LICENSE) for license terms. Contributions welcome via issues and pull requests on GitHub.
 
