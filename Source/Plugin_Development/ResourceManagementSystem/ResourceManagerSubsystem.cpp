@@ -2,7 +2,10 @@
 
 
 #include "ResourceManagerSubsystem.h"
-#include "GameFramework/PlayerState.h"
+
+#include "ResourceDefinition.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "GameFramework/GameModeBase.h"
 
 UResourceManagerSubsystem::UResourceManagerSubsystem()
 {
@@ -11,11 +14,31 @@ UResourceManagerSubsystem::UResourceManagerSubsystem()
 void UResourceManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
+	ComponentResourceMap.Empty();
+	Definitions.Empty();
+	
+	FAssetRegistryModule& Arm = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	IAssetRegistry& AR = Arm.Get();
+
+	// This returns the FTopLevelAssetPath that AssetRegistry expects
+	FTopLevelAssetPath ClassPath = UResourceDefinition::StaticClass()->GetClassPathName();
+
+	TArray<FAssetData> AssetDatas;
+	AR.GetAssetsByClass(ClassPath, AssetDatas, /*bSearchSubClasses=*/false);
+
+	for (auto& AD : AssetDatas)
+	{
+		if (UResourceDefinition* Def = Cast<UResourceDefinition>(AD.GetAsset()))
+		{
+			Definitions.Add(Def->ResourceName, Def);
+		}
+	}
 }
 
 void UResourceManagerSubsystem::Deinitialize()
 {
-	PlayerResourceMap.Empty();
+	ComponentResourceMap.Empty();
+	Definitions.Empty();
 	Super::Deinitialize();
 }
 
@@ -24,22 +47,41 @@ void UResourceManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	Super::OnWorldBeginPlay(InWorld);
 }
 
-void UResourceManagerSubsystem::AddResource(UResourceComponent* ResourceComponent, FName ResourceName, int32 Amount)
+void UResourceManagerSubsystem::RegisterComponent(UResourceSystemComponent* Comp)
 {
-	if (!ResourceComponent || Amount <= 0) return;
+	// Only register on server-authoritative side
+	if (Comp && GetWorld()->GetAuthGameMode())
+	{
+		ComponentResourceMap.FindOrAdd(Comp);
+	}
+}
 
-	FResourceBucket& Bucket = PlayerResourceMap.FindOrAdd(ResourceComponent);
+void UResourceManagerSubsystem::UnregisterComponent(UResourceSystemComponent* Comp)
+{
+	if (Comp && GetWorld()->GetAuthGameMode())
+	{
+		ComponentResourceMap.Remove(Comp);
+	}
+}
+
+
+void UResourceManagerSubsystem::AddResource(UResourceSystemComponent* ResourceComponent, FName ResourceName, int32 Amount)
+{
+	if (!GetWorld()->GetAuthGameMode() || !ResourceComponent || Amount <= 0) return;
+
+	FResourceBucket& Bucket = ComponentResourceMap.FindOrAdd(ResourceComponent);
 	int32& CurrentAmount = Bucket.Resources.FindOrAdd(ResourceName);
 	CurrentAmount += Amount;
 
-	ResourceComponent->OnResourceChanged.Broadcast(ResourceName, CurrentAmount, Amount);
+	//ResourceComponent->OnResourceChanged.Broadcast(ResourceName, CurrentAmount, Amount);
+	ResourceComponent->Client_UpdateResource(ResourceName, CurrentAmount, Amount);
 }
 
-int32 UResourceManagerSubsystem::GetResource(const UResourceComponent* ResourceComponent, FName ResourceName) const
+int32 UResourceManagerSubsystem::GetResource(const UResourceSystemComponent* ResourceComponent, FName ResourceName) const
 {
 	if (!ResourceComponent)	return -1;
 	
-	if (const FResourceBucket* Bucket = PlayerResourceMap.Find(ResourceComponent))
+	if (const FResourceBucket* Bucket = ComponentResourceMap.Find(ResourceComponent))
 	{
 		if (const int32* Amount = Bucket->Resources.Find(ResourceName))
 		{
@@ -49,11 +91,20 @@ int32 UResourceManagerSubsystem::GetResource(const UResourceComponent* ResourceC
 	return -1;
 }
 
-bool UResourceManagerSubsystem::SpendResource(UResourceComponent* ResourceComponent, FName ResourceName, int32 Amount)
+void UResourceManagerSubsystem::GetAllResources(const UResourceSystemComponent* Comp, TMap<FName, int32>& OutAvailableResources) const
 {
-	if (!ResourceComponent || Amount <= 0) return false;
+	if (!Comp) return;
+	if (ComponentResourceMap.Contains(Comp))
+	{
+		OutAvailableResources = ComponentResourceMap.Find(Comp)->Resources;
+	}
+}
 
-	FResourceBucket* Bucket = PlayerResourceMap.Find(ResourceComponent);
+bool UResourceManagerSubsystem::SpendResource(UResourceSystemComponent* ResourceComponent, FName ResourceName, int32 Amount)
+{
+	if (!GetWorld()->GetAuthGameMode() || !ResourceComponent || Amount <= 0) return false;
+
+	FResourceBucket* Bucket = ComponentResourceMap.Find(ResourceComponent);
 	if (!Bucket)	return false;
 
 	int32* CurrentAmount = Bucket->Resources.Find(ResourceName);
@@ -61,6 +112,12 @@ bool UResourceManagerSubsystem::SpendResource(UResourceComponent* ResourceCompon
 
 	*CurrentAmount -= Amount;
 	
-	ResourceComponent->OnResourceChanged.Broadcast(ResourceName, *CurrentAmount, (Amount * -1));
+	//ResourceComponent->OnResourceChanged.Broadcast(ResourceName, *CurrentAmount, (Amount * -1));
+	ResourceComponent->Client_UpdateResource(ResourceName, *CurrentAmount, (Amount * -1));
 	return true;
+}
+
+UResourceDefinition* UResourceManagerSubsystem::GetDefinition(FName ResourceName) const
+{
+	return *Definitions.Find(ResourceName);
 }
