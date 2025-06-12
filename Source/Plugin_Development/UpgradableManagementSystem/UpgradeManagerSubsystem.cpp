@@ -477,16 +477,17 @@ bool UUpgradeManagerSubsystem::CanUpgrade(const int32 ComponentId, const int32 L
 		
 		TMap<FName, int32> TotalResourceCosts;
 		// Iterate over all levels if trying to upgrade several levels at once
-		for (int32 i = GetCurrentLevel(ComponentId); i < GetCurrentLevel(ComponentId) + LevelIncrease; ++i)
+		for (int32 i = GetNextLevel(ComponentId); i <= GetCurrentLevel(ComponentId) + LevelIncrease; ++i)
 		{
 			LevelData = &(*UpgradeDefinitions)[i];
 			if (LevelData->bUpgradeLocked) return false;
+			FName ResourceType ;
 			// Add up the required resource cost for each resource for this level
 			for (int32 j = 0; j < LevelData->ResourceTypeIndices.Num(); ++j)
 			{
-				const FName ResourceType = GetResourceTypeName(LevelData->ResourceTypeIndices[j]);
+				ResourceType = GetResourceTypeName(LevelData->ResourceTypeIndices[j]);
 				// no resource of the required type was provided
-				if (!AvailableResources.Find(ResourceType)) return false;
+				if (!AvailableResources.Contains(ResourceType)) return false;
 				
 				TotalResourceCosts.FindOrAdd(ResourceType) += LevelData->UpgradeCosts[j];
 			}
@@ -496,7 +497,7 @@ bool UUpgradeManagerSubsystem::CanUpgrade(const int32 ComponentId, const int32 L
 		for (FName ResourceType : RequiredResources)
 		{
 			// not enough resources of the required type
-			if (TotalResourceCosts[ResourceType] > AvailableResources[ResourceType]) return false;
+			if (TotalResourceCosts[ResourceType] > AvailableResources.FindRef(ResourceType)) return false;
 		}
 		
 		Success = true;
