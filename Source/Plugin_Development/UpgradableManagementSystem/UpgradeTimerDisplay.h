@@ -28,18 +28,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Upgrade System", meta=(ExposeOnSpawn="true"))
 	UUpgradableComponent* TrackedComponent = nullptr;
 
+	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Timer")
+	void BindUpgradableComponent(int32 ComponentId);
+
 protected:
 
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
 	UTextBlock* LevelText;
 
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
 	UTextBlock* CountdownText;
 
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
 	UTextBlock* CountdownChangedText;
 
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
 	UProgressBar* UpgradeProgress;
 
 	UPROPERTY()

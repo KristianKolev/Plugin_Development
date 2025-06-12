@@ -3,6 +3,7 @@
 
 #include "UpgradeTimerDisplay.h"
 #include "MightyraiderFunctionLibrary.h"
+#include "UpgradeManagerSubsystem.h"
 
 
 void UUpgradeTimerDisplay::NativeConstruct()
@@ -15,6 +16,20 @@ void UUpgradeTimerDisplay::NativeConstruct()
 		TrackedComponent->OnLevelChanged.AddDynamic(this, &UUpgradeTimerDisplay::HandleLevelChanged);
 		TrackedComponent->OnTimeToUpgradeChanged.AddDynamic(this, &UUpgradeTimerDisplay::HandleTimeToUpgradeChanged);
 		
+	}
+}
+
+void UUpgradeTimerDisplay::BindUpgradableComponent(int32 ComponentId)
+{
+	if (!TrackedComponent) return;
+	
+	if (UUpgradableComponent* Comp = GetWorld()->GetSubsystem<UUpgradeManagerSubsystem>()->GetComponentById(ComponentId))
+	{
+		TrackedComponent = Comp;
+		TrackedComponent->OnUpgradeStarted.AddDynamic(this, &UUpgradeTimerDisplay::HandleUpgradeStarted);
+		TrackedComponent->OnUpgradeCanceled.AddDynamic(this, &UUpgradeTimerDisplay::HandleUpgradeCanceled);
+		TrackedComponent->OnLevelChanged.AddDynamic(this, &UUpgradeTimerDisplay::HandleLevelChanged);
+		TrackedComponent->OnTimeToUpgradeChanged.AddDynamic(this, &UUpgradeTimerDisplay::HandleTimeToUpgradeChanged);
 	}
 }
 
