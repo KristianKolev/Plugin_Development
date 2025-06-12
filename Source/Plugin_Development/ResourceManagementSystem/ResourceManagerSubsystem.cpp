@@ -17,21 +17,55 @@ void UResourceManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	ComponentResourceMap.Empty();
 	Definitions.Empty();
 	
-	FAssetRegistryModule& Arm = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-	IAssetRegistry& AR = Arm.Get();
+	const FString ScanPath = TEXT("/Game/Data/Resources");
+	UE_LOG(LogTemp, Log, TEXT("[ResourceMgr] Scanning folder %s for any assets"), *ScanPath);
 
-	// This returns the FTopLevelAssetPath that AssetRegistry expects
-	FTopLevelAssetPath ClassPath = UResourceDefinition::StaticClass()->GetClassPathName();
-
-	TArray<FAssetData> AssetDatas;
-	AR.GetAssetsByClass(ClassPath, AssetDatas, /*bSearchSubClasses=*/false);
-
-	for (auto& AD : AssetDatas)
+	// Query AssetRegistry for all assets under that path
+	FAssetRegistryModule& RegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	TArray<FAssetData> AssetsInFolder;
+	RegistryModule.Get().GetAssetsByPath(FName(*ScanPath), AssetsInFolder, /*bRecursive=*/true);
+	UE_LOG(LogTemp, Log, TEXT("[ResourceMgr] Found %d assets under %s"), AssetsInFolder.Num(), *ScanPath);
+    
+	if (AssetsInFolder.Num() == 0)
 	{
-		if (UResourceDefinition* Def = Cast<UResourceDefinition>(AD.GetAsset()))
+		UE_LOG(LogTemp, Warning, TEXT("[ResourceMgr_ERR_00] No assets found in path: '%s'"), *ScanPath);
+		return;
+	}
+	
+	// 3) Try casting each one to UResourceDefinition
+	for (const FAssetData& AssetData : AssetsInFolder)
+	{
+		if (AssetData.AssetClassPath != UResourceDefinition::StaticClass()->GetClassPathName())
+			continue;
+		
+		UResourceDefinition* Asset = Cast<UResourceDefinition>(AssetData.GetAsset());
+		if (!Asset)
 		{
-			Definitions.Add(Def->ResourceName, Def);
+			UE_LOG(LogTemp, Warning, TEXT("[ResourceMgr_ERR_01] Failed to load UResourceDefinition '%s'"), 
+				*AssetData.ObjectPath.ToString());
+			continue;
 		}
+		
+		if (Definitions.Contains(Asset->ResourceName))
+		{
+			UE_LOG(LogTemp, Warning,
+				TEXT("[ResourceMgr] Duplicate ResourceName '%s' in %s"),
+				*Asset->ResourceName.ToString(),
+				*AssetData.ObjectPath.ToString());
+		}
+		Definitions.Add(Asset->ResourceName, Asset);
+		UE_LOG(LogTemp, Log,
+			TEXT("[ResourceMgr] Registered Definition '%s' (Name: %s)"),
+			*AssetData.AssetName.ToString(),
+			*Asset->ResourceName.ToString());
+		
+	}
+
+	if (Definitions.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[ResourceMgr] No UResourceDefinition assets found after scanning %s!"),
+			*ScanPath);
 	}
 }
 
@@ -119,5 +153,10 @@ bool UResourceManagerSubsystem::SpendResource(UResourceSystemComponent* Resource
 
 UResourceDefinition* UResourceManagerSubsystem::GetDefinition(FName ResourceName) const
 {
-	return *Definitions.Find(ResourceName);
+	if (Definitions.Contains(ResourceName))
+	{
+		return Definitions[ResourceName];
+	}
+	return nullptr;
+	
 }
