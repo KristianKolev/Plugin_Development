@@ -17,18 +17,18 @@ void UResourceManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	ComponentResourceMap.Empty();
 	Definitions.Empty();
 	
-	const FString ScanPath = TEXT("/Game/Data/Resources");
-	UE_LOG(LogTemp, Log, TEXT("[ResourceMgr] Scanning folder %s for any assets"), *ScanPath);
+        const FString ScanPath = TEXT("/Game/Data/Resources");
+        UE_LOG(LogTemp, Log, TEXT("[RESOURCEMGR_INFO_01] Scanning folder %s for any assets"), *ScanPath);
 
 	// Query AssetRegistry for all assets under that path
 	FAssetRegistryModule& RegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 	TArray<FAssetData> AssetsInFolder;
-	RegistryModule.Get().GetAssetsByPath(FName(*ScanPath), AssetsInFolder, /*bRecursive=*/true);
-	UE_LOG(LogTemp, Log, TEXT("[ResourceMgr] Found %d assets under %s"), AssetsInFolder.Num(), *ScanPath);
+        RegistryModule.Get().GetAssetsByPath(FName(*ScanPath), AssetsInFolder, /*bRecursive=*/true);
+        UE_LOG(LogTemp, Log, TEXT("[RESOURCEMGR_INFO_02] Found %d assets under %s"), AssetsInFolder.Num(), *ScanPath);
     
 	if (AssetsInFolder.Num() == 0)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[ResourceMgr_ERR_00] No assets found in path: '%s'"), *ScanPath);
+                UE_LOG(LogTemp, Warning, TEXT("[RESOURCEMGR_ERR_00] No assets found in path: '%s'"), *ScanPath);
 		return;
 	}
 	
@@ -41,31 +41,26 @@ void UResourceManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		UResourceDefinition* Asset = Cast<UResourceDefinition>(AssetData.GetAsset());
 		if (!Asset)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[ResourceMgr_ERR_01] Failed to load UResourceDefinition '%s'"), 
-				*AssetData.ObjectPath.ToString());
+                UE_LOG(LogTemp, Warning, TEXT("[RESOURCEMGR_ERR_01] Failed to load UResourceDefinition '%s'"),
+                        *AssetData.ObjectPath.ToString());
 			continue;
 		}
 		
 		if (Definitions.Contains(Asset->ResourceName))
 		{
-			UE_LOG(LogTemp, Warning,
-				TEXT("[ResourceMgr] Duplicate ResourceName '%s' in %s"),
-				*Asset->ResourceName.ToString(),
-				*AssetData.ObjectPath.ToString());
-		}
-		Definitions.Add(Asset->ResourceName, Asset);
-		UE_LOG(LogTemp, Log,
-			TEXT("[ResourceMgr] Registered Definition '%s' (Name: %s)"),
-			*AssetData.AssetName.ToString(),
-			*Asset->ResourceName.ToString());
+                        UE_LOG(LogTemp, Warning, TEXT("[RESOURCEMGR_ERR_02] Duplicate ResourceName '%s' in %s"),
+                                *Asset->ResourceName.ToString(), *AssetData.ObjectPath.ToString());
+                }
+                Definitions.Add(Asset->ResourceName, Asset);
+                UE_LOG(LogTemp, Log, TEXT("[RESOURCEMGR_INFO_03] Registered Definition '%s' (Name: %s)"),
+                        *AssetData.AssetName.ToString(), *Asset->ResourceName.ToString());
 		
 	}
 
 	if (Definitions.Num() == 0)
 	{
-		UE_LOG(LogTemp, Warning,
-			TEXT("[ResourceMgr] No UResourceDefinition assets found after scanning %s!"),
-			*ScanPath);
+                UE_LOG(LogTemp, Warning, TEXT("[RESOURCEMGR_ERR_03] No UResourceDefinition assets found after scanning %s!"),
+                        *ScanPath);
 	}
 }
 
