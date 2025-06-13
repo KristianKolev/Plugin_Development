@@ -57,11 +57,16 @@ void UResourceManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		
 	}
 
-	if (Definitions.Num() == 0)
-	{
+        if (Definitions.Num() == 0)
+        {
                 UE_LOG(LogTemp, Warning, TEXT("[RESOURCEMGR_ERR_03] No UResourceDefinition assets found after scanning %s!"),
                         *ScanPath);
-	}
+        }
+        else
+        {
+                UE_LOG(LogTemp, Log, TEXT("[RESOURCEMGR_INFO_04] Registered %d resource definitions from '%s'"),
+                        Definitions.Num(), *ScanPath);
+        }
 }
 
 void UResourceManagerSubsystem::Deinitialize()
