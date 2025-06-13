@@ -64,7 +64,10 @@ void UResourceSystemComponent::SpendResource(FName ResourceName, int32 Amount)
     {
         GetWorldSubsystem()->SpendResource(this, ResourceName, Amount);
     }
-    Server_SpendResource(ResourceName, Amount);
+    else
+    {
+        Server_SpendResource(ResourceName, Amount);
+    }
 }
 
 int32 UResourceSystemComponent::GetResource(FName ResourceName) const
