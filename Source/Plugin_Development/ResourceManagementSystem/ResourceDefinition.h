@@ -27,3 +27,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Resource System", meta=(MultiLine=true))
 	FText Description;
 };
+
+UENUM(BlueprintType)
+enum class EResourceType : uint8
+{
+	None = 0,
+	Food,
+	Water,
+	Wood,
+	Stone,
+	Iron,
+	Gold,
+	Moonstone,
+	Energy,
+	Power
+};
