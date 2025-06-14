@@ -38,7 +38,7 @@ A data‑driven upgrade framework that lets any actor gain leveling, ranking, or
 
 Open **Project Settings → Upgrade System Settings** to select your data source and containing folder.
 
-1. **JSON files**: each file defines an `UpgradePath` (e.g. BasicUnit, AdvancedBuilding, Ring) and a `levels` array with resource costs, upgrade durations, and locked status.
+1. **JSON files**: each file defines an `UpgradePath` (e.g. BasicUnit, AdvancedBuilding, Ring) and a `levels` array with resource costs, upgrade durations, and locked status. Field names can be customized in the **Json Field Names** section of the settings if your JSON schema uses different names.
 2. **DataTables**: `UpgradePath` should be the table's name and each row struct (`FUpgradeDefinition`) represents one level.
 3. **DataAssets**: Defines `UpgradePath` and `TArray<FUpgradeDefinition>`
 4. **DataAsset**: `UOnLevelUpVisualsDataAsset` bundles meshes, materials, and niagara systems that can be applied through `UUpgradableComponent::ChangeActorVisualsPerUpgradeLevel` in BP to change the visual appearance of an actor as it levels up.
