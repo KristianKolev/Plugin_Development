@@ -83,29 +83,34 @@ void UResourceManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 
 void UResourceManagerSubsystem::RegisterComponent(UResourceSystemComponent* Comp)
 {
-	// Only register on server-authoritative side
-	if (Comp && GetWorld()->GetAuthGameMode())
-	{
-		ComponentResourceMap.FindOrAdd(Comp);
-	}
+        // Only register on server-authoritative side
+        if (Comp && GetWorld()->GetAuthGameMode())
+        {
+                ComponentResourceMap.FindOrAdd(Comp);
+                UE_LOG(LogTemp, Log, TEXT("[RESOURCEMGR_INFO_05] Registered component %s"), *Comp->GetName());
+        }
 }
 
 void UResourceManagerSubsystem::UnregisterComponent(UResourceSystemComponent* Comp)
 {
-	if (Comp && GetWorld()->GetAuthGameMode())
-	{
-		ComponentResourceMap.Remove(Comp);
-	}
+        if (Comp && GetWorld()->GetAuthGameMode())
+        {
+                ComponentResourceMap.Remove(Comp);
+                UE_LOG(LogTemp, Log, TEXT("[RESOURCEMGR_INFO_06] Unregistered component %s"), *Comp->GetName());
+        }
 }
 
 
 void UResourceManagerSubsystem::AddResource(UResourceSystemComponent* ResourceComponent, FName ResourceName, int32 Amount)
 {
-	if (!GetWorld()->GetAuthGameMode() || !ResourceComponent || Amount <= 0) return;
+        if (!GetWorld()->GetAuthGameMode() || !ResourceComponent || Amount <= 0) return;
 
-	FResourceBucket& Bucket = ComponentResourceMap.FindOrAdd(ResourceComponent);
-	int32& CurrentAmount = Bucket.Resources.FindOrAdd(ResourceName);
-	CurrentAmount += Amount;
+        FResourceBucket& Bucket = ComponentResourceMap.FindOrAdd(ResourceComponent);
+        int32& CurrentAmount = Bucket.Resources.FindOrAdd(ResourceName);
+        const int32 OldAmount = CurrentAmount;
+        CurrentAmount += Amount;
+        UE_LOG(LogTemp, Log, TEXT("[RESOURCEMGR_INFO_07] Added %d of '%s' to %s (old: %d, new: %d, diff: +%d)"),
+                Amount, *ResourceName.ToString(), *ResourceComponent->GetName(), OldAmount, CurrentAmount, Amount);
 
 	//ResourceComponent->OnResourceChanged.Broadcast(ResourceName, CurrentAmount, Amount);
 	ResourceComponent->Client_UpdateResource(ResourceName, CurrentAmount, Amount);
@@ -136,19 +141,34 @@ void UResourceManagerSubsystem::GetAllResources(const UResourceSystemComponent* 
 
 bool UResourceManagerSubsystem::SpendResource(UResourceSystemComponent* ResourceComponent, FName ResourceName, int32 Amount)
 {
-	if (!GetWorld()->GetAuthGameMode() || !ResourceComponent || Amount <= 0) return false;
+    if (!GetWorld()->GetAuthGameMode() || !ResourceComponent || Amount <= 0) return false;
 
-	FResourceBucket* Bucket = ComponentResourceMap.Find(ResourceComponent);
-	if (!Bucket)	return false;
+    FResourceBucket* Bucket = ComponentResourceMap.Find(ResourceComponent);
+    if (!Bucket)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[RESOURCEMGR_ERR_04] Component %s has no resource bucket"), *ResourceComponent->GetName());
+        return false;
+    }
 
-	int32* CurrentAmount = Bucket->Resources.Find(ResourceName);
-	if (!CurrentAmount || *CurrentAmount < Amount) return false;
+    int32* CurrentAmount = Bucket->Resources.Find(ResourceName);
+    if (!CurrentAmount)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[RESOURCEMGR_ERR_05] Resource '%s' not found for component %s"), *ResourceName.ToString(), *ResourceComponent->GetName());
+        return false;
+    }
+    if (*CurrentAmount < Amount)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[RESOURCEMGR_ERR_06] Not enough '%s' for component %s (have: %d, need: %d)"), *ResourceName.ToString(), *ResourceComponent->GetName(), *CurrentAmount, Amount);
+        return false;
+    }
 
-	*CurrentAmount -= Amount;
-	
-	//ResourceComponent->OnResourceChanged.Broadcast(ResourceName, *CurrentAmount, (Amount * -1));
-	ResourceComponent->Client_UpdateResource(ResourceName, *CurrentAmount, (Amount * -1));
-	return true;
+    const int32 OldAmount = *CurrentAmount;
+    *CurrentAmount -= Amount;
+    UE_LOG(LogTemp, Log, TEXT("[RESOURCEMGR_INFO_08] Spent %d of '%s' from %s (old: %d, new: %d, diff: -%d)"), Amount, *ResourceName.ToString(), *ResourceComponent->GetName(), OldAmount, *CurrentAmount, Amount);
+
+    //ResourceComponent->OnResourceChanged.Broadcast(ResourceName, *CurrentAmount, (Amount * -1));
+    ResourceComponent->Client_UpdateResource(ResourceName, *CurrentAmount, (Amount * -1));
+    return true;
 }
 
 UResourceDefinition* UResourceManagerSubsystem::GetDefinition(FName ResourceName) const
