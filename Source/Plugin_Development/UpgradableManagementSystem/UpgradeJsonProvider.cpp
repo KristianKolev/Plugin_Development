@@ -1,6 +1,7 @@
 #include "UpgradeJsonProvider.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "UpgradeSettings.h"
 
 UUpgradeJsonProvider::UUpgradeJsonProvider()
 {
@@ -9,7 +10,8 @@ UUpgradeJsonProvider::UUpgradeJsonProvider()
 void UUpgradeJsonProvider::InitializeData(const FString& FolderPath, TMap<FName, TArray<FUpgradeDefinition>>& OutCatalog,
                                           TArray<FName>& OutResourceTypes)
 {
-	TArray<FString> Files;
+       const FUpgradeJsonFieldNames& Fields = GetDefault<UUpgradeSettings>()->JsonFieldNames;
+       TArray<FString> Files;
 	IFileManager::Get().FindFilesRecursive(Files, *FolderPath, TEXT("*.json"), true, false);
 
 	for (const FString& File : Files)
@@ -30,7 +32,7 @@ void UUpgradeJsonProvider::InitializeData(const FString& FolderPath, TMap<FName,
 		// Determine UpgradePathId from JSON field or fallback to filename
 		FString PathIdStr;
 		FName PathId;
-		if (Root->TryGetStringField(TEXT("UpgradePath"), PathIdStr) && !PathIdStr.IsEmpty())
+               if (Root->TryGetStringField(*Fields.UpgradePathField, PathIdStr) && !PathIdStr.IsEmpty())
 		{
 			PathId = FName(*PathIdStr);
 			UE_LOG(LogTemp, Log, TEXT("[UPGRADEJSON_INFO_01] Using UpgradePath '%s' from JSON"), *PathIdStr);
@@ -44,11 +46,11 @@ void UUpgradeJsonProvider::InitializeData(const FString& FolderPath, TMap<FName,
 
 		// Extract levels array
 		const TArray<TSharedPtr<FJsonValue>>* Levels;
-		if (!Root->TryGetArrayField(TEXT("Levels"), Levels))
-		{
-			UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_03] JSON file %s missing 'Levels' array."), *FolderPath);
-			return;
-		}
+               if (!Root->TryGetArrayField(*Fields.LevelsField, Levels))
+               {
+                       UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_03] JSON file %s missing '%s' array."), *FolderPath, *Fields.LevelsField);
+                       return;
+               }
 
 		for (int32 LvlIndex = 0; LvlIndex < Levels->Num(); ++LvlIndex)
 		{
@@ -63,12 +65,12 @@ void UUpgradeJsonProvider::InitializeData(const FString& FolderPath, TMap<FName,
 			FUpgradeDefinition LevelData;
 
 			// Parse resources array
-			const TArray<TSharedPtr<FJsonValue>>* Resources;
-			if (!(*LvlObj)->TryGetArrayField(TEXT("Resources"), Resources))
-			{
-				UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_05] Level %d in %s missing 'Resources' array."), LvlIndex, *FolderPath);
-				continue;
-			}
+                       const TArray<TSharedPtr<FJsonValue>>* Resources;
+                       if (!(*LvlObj)->TryGetArrayField(*Fields.ResourcesField, Resources))
+                       {
+                               UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_05] Level %d in %s missing '%s' array."), LvlIndex, *FolderPath, *Fields.ResourcesField);
+                               continue;
+                       }
 
 			for (int32 ResIndex = 0; ResIndex < Resources->Num(); ++ResIndex)
 			{
@@ -79,12 +81,12 @@ void UUpgradeJsonProvider::InitializeData(const FString& FolderPath, TMap<FName,
 					continue;
 				}
 				// Type string
-				FString TypeStr = (*ResObj)->GetStringField(TEXT("Type"));
+                               FString TypeStr = (*ResObj)->GetStringField(*Fields.ResourceTypeField);
 				FName TypeName(*TypeStr);
 				int32 TypeIdx = AddOrFindRequiredResourceTypeIndex(TypeName, OutResourceTypes);
 				LevelData.ResourceTypeIndices.Add(TypeIdx);
 
-				int32 Amount = (*ResObj)->GetIntegerField(TEXT("Amount"));
+                               int32 Amount = (*ResObj)->GetIntegerField(*Fields.ResourceAmountField);
 				LevelData.UpgradeCosts.Add(Amount);
 			}
 
@@ -95,17 +97,17 @@ void UUpgradeJsonProvider::InitializeData(const FString& FolderPath, TMap<FName,
 			}
 			
 			int32 UpgradeSeconds = 0;
-			if (!(*LvlObj)->TryGetNumberField(TEXT("UpgradeSeconds"), UpgradeSeconds))
-			{
-				UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_08] Level %d in %s missing or invalid 'UpgradeSeconds' field."), LvlIndex, *FolderPath);
-			}
+                       if (!(*LvlObj)->TryGetNumberField(*Fields.UpgradeSecondsField, UpgradeSeconds))
+                       {
+                               UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_08] Level %d in %s missing or invalid '%s' field."), LvlIndex, *FolderPath, *Fields.UpgradeSecondsField);
+                       }
 			LevelData.UpgradeSeconds = UpgradeSeconds;
 
 			bool bLocked = false;
-			if (!(*LvlObj)->TryGetBoolField(TEXT("UpgradeLocked"), bLocked))
-			{
-				UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_09] Level %d in %s missing or invalid 'UpgradeLocked' field."), LvlIndex, *FolderPath);
-			}
+                       if (!(*LvlObj)->TryGetBoolField(*Fields.UpgradeLockedField, bLocked))
+                       {
+                               UE_LOG(LogTemp, Warning, TEXT("[UPGRADEJSON_ERR_09] Level %d in %s missing or invalid '%s' field."), LvlIndex, *FolderPath, *Fields.UpgradeLockedField);
+                       }
 			LevelData.bUpgradeLocked = bLocked;
 			
 			LevelDataArray.Add(LevelData);
