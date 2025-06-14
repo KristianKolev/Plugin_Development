@@ -23,7 +23,7 @@ public:
 	virtual void Deinitialize() override;
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 	
-	void InitializeProvider();
+       void InitializeProviders();
 	int32 RegisterUpgradableComponent(UUpgradableComponent* Component);
 	void UnregisterUpgradableComponent(int32 ComponentId);
 	
@@ -178,8 +178,8 @@ protected:
 	UPROPERTY()
 	FString UpgradeDataFolderPath;
 
-	UPROPERTY()
-	TObjectPtr<UUpgradeDataProvider> DataProvider;
+       UPROPERTY()
+       TArray<TObjectPtr<UUpgradeDataProvider>> DataProviders;
 
 	// Loaders
 	void LoadCatalog();

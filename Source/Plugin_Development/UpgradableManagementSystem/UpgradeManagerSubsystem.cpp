@@ -4,6 +4,9 @@
 #include "UpgradeDataAssetProvider.h"
 #include "UpgradeDataTableProvider.h"
 #include "UpgradeJsonProvider.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Engine/DataTable.h"
+#include "UpgradeDefinitionDataAsset.h"
 #include "UpgradeSettings.h"
 #include "TimerManager.h"
 #include "Engine/World.h"
@@ -22,47 +25,98 @@ void UUpgradeManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UUpgradeManagerSubsystem::Deinitialize()
 {
-	DataProvider = nullptr;
-	Super::Deinitialize();
+        DataProviders.Empty();
+        Super::Deinitialize();
 }
 
-void UUpgradeManagerSubsystem::InitializeProvider()
+void UUpgradeManagerSubsystem::InitializeProviders()
 {
-	const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
-	switch (Settings->CatalogSource)
-	{
-	case EUpgradeCatalogSource::JsonFolder:
-		DataProvider = NewObject<UUpgradeJsonProvider>(this);
-		UpgradeDataFolderPath = FPaths::ProjectContentDir() / Settings->JsonFolderPath;
-		break;
-	case EUpgradeCatalogSource::DataTableFolder:
-		DataProvider = NewObject<UUpgradeDataTableProvider>(this);
-		UpgradeDataFolderPath = Settings->DataTableFolderPath;
-		break;
-	case EUpgradeCatalogSource::DataAssetFolder:
-		DataProvider = NewObject<UUpgradeDataAssetProvider>(this);
-		UpgradeDataFolderPath = Settings->DataAssetFolderPath;
-		break;
-	default:
-		DataProvider = nullptr;
-		UpgradeDataFolderPath = TEXT("INVALID PATH");
-		UE_LOG(LogTemp, Warning, TEXT("[UPGRADECATALOG_ERR_01] Invalid catalog source"));
-		break;
-	}
+        const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
+        UpgradeDataFolderPath = Settings->UpgradeDataFolderPath;
+
+        DataProviders.Empty();
+
+        FString AssetPath = UpgradeDataFolderPath;
+        if (!AssetPath.StartsWith(TEXT("/Game")))
+        {
+                AssetPath = FPaths::Combine(TEXT("/Game"), AssetPath);
+        }
+
+        FString JsonDiskPath = FPackageName::LongPackageNameToFilename(AssetPath);
+        TArray<FString> JsonFiles;
+        IFileManager::Get().FindFilesRecursive(JsonFiles, *JsonDiskPath, TEXT("*.json"), true, false);
+
+        FAssetRegistryModule& RegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+        TArray<FAssetData> AssetsInFolder;
+        RegistryModule.Get().GetAssetsByPath(FName(*AssetPath), AssetsInFolder, /*bRecursive=*/true);
+
+        // Map asset class to provider class for easy extension
+        TMap<FName, TSubclassOf<UUpgradeDataProvider>> AssetProviderMap;
+        AssetProviderMap.Add(UDataTable::StaticClass()->GetClassPathName(), UUpgradeDataTableProvider::StaticClass());
+        AssetProviderMap.Add(UUpgradeDefinitionDataAsset::StaticClass()->GetClassPathName(), UUpgradeDataAssetProvider::StaticClass());
+
+        TSet<TSubclassOf<UUpgradeDataProvider>> ProvidersToCreate;
+
+        if (JsonFiles.Num() > 0)
+        {
+                ProvidersToCreate.Add(UUpgradeJsonProvider::StaticClass());
+        }
+
+        for (const FAssetData& AssetData : AssetsInFolder)
+        {
+                if (const TSubclassOf<UUpgradeDataProvider>* ProviderClass = AssetProviderMap.Find(AssetData.AssetClassPath))
+                {
+                        ProvidersToCreate.Add(*ProviderClass);
+                }
+        }
+
+        for (TSubclassOf<UUpgradeDataProvider> ProviderClass : ProvidersToCreate)
+        {
+                if (!ProviderClass)
+                        continue;
+
+                DataProviders.Add(NewObject<UUpgradeDataProvider>(this, ProviderClass));
+        }
+
+        if (DataProviders.Num() == 0)
+        {
+                UE_LOG(LogTemp, Warning, TEXT("[UPGRADECATALOG_ERR_01] No upgrade data found in %s"), *AssetPath);
+        }
 }
 
 void UUpgradeManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
-	Super::OnWorldBeginPlay(InWorld);
-	InitializeProvider();
-	LoadCatalog();
+        Super::OnWorldBeginPlay(InWorld);
+        InitializeProviders();
+        LoadCatalog();
 }
 
 void UUpgradeManagerSubsystem::LoadCatalog()
 {
-	if (!DataProvider)	return;
-	UpgradeCatalog.Empty();
-	DataProvider->InitializeData(UpgradeDataFolderPath, UpgradeCatalog, ResourceTypes);
+        if (DataProviders.Num() == 0)      return;
+        UpgradeCatalog.Empty();
+        ResourceTypes.Empty();
+
+        FString AssetPath = UpgradeDataFolderPath;
+        if (!AssetPath.StartsWith(TEXT("/Game")))
+        {
+                AssetPath = FPaths::Combine(TEXT("/Game"), AssetPath);
+        }
+
+        // Map provider class to folder path transformation
+        TMap<UClass*, FString> ProviderPathMap;
+        ProviderPathMap.Add(UUpgradeJsonProvider::StaticClass(), FPackageName::LongPackageNameToFilename(AssetPath));
+        ProviderPathMap.Add(UUpgradeDataTableProvider::StaticClass(), AssetPath);
+        ProviderPathMap.Add(UUpgradeDataAssetProvider::StaticClass(), AssetPath);
+
+        for (UUpgradeDataProvider* Provider : DataProviders)
+        {
+                if (!Provider) continue;
+
+                const FString* UsePath = ProviderPathMap.Find(Provider->GetClass());
+                const FString& FinalPath = UsePath ? *UsePath : AssetPath;
+                Provider->InitializeData(FinalPath, UpgradeCatalog, ResourceTypes);
+        }
 }
 
 int32 UUpgradeManagerSubsystem::RegisterUpgradableComponent(UUpgradableComponent* Component)
