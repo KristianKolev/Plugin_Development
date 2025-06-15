@@ -34,6 +34,15 @@ void UUpgradeDataTableProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
         ++LoadedTables;
 
         FName PathId = FName(*Table->GetName());
+
+        TArray<FUpgradeDefinition>* ExistingArray = OutCatalog.Find(PathId);
+        if (ExistingArray)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[UPGRADECATALOG_WARN_01] Duplicate UpgradePath '%s' found in DataTable '%s'. Overriding previous data."),
+                   *PathId.ToString(), *Table->GetName());
+            ExistingArray->Reset();
+        }
+
         TArray<FUpgradeDefinition>& LevelArray = OutCatalog.FindOrAdd(PathId);
         
         int32 ProcessedRows = 0;
