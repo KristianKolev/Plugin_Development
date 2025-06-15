@@ -25,47 +25,36 @@ void UUpgradeManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UUpgradeManagerSubsystem::Deinitialize()
 {
-        DataProviders.Empty();
         Super::Deinitialize();
 }
 
-void UUpgradeManagerSubsystem::InitializeProviders()
+TArray<UUpgradeDataProvider*> UUpgradeManagerSubsystem::InitializeProviders()
 {
-        const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
-        UpgradeDataFolderPath = Settings->UpgradeDataFolderPath;
-
-       DataProviders.Empty();
-
-       UUpgradeDataProvider* Scanner = NewObject<UUpgradeDataProvider>(this);
-       TArray<UUpgradeDataProvider*> FoundProviders = Scanner->Scan(UpgradeDataFolderPath);
-       for (UUpgradeDataProvider* Provider : FoundProviders)
-       {
-               if (Provider)
-               {
-                       DataProviders.Add(Provider);
-               }
-       }
-
+	const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
+	FString UpgradeDataFolderPath = Settings->UpgradeDataFolderPath;
+	
+	UUpgradeDataProvider* Scanner = NewObject<UUpgradeDataProvider>(this);
+	return Scanner->Scan(UpgradeDataFolderPath);
 }
 
 void UUpgradeManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
-        Super::OnWorldBeginPlay(InWorld);
-        InitializeProviders();
-        LoadCatalog();
+	Super::OnWorldBeginPlay(InWorld);
+	const TArray<UUpgradeDataProvider*> DataProviders = InitializeProviders();
+	LoadCatalog(DataProviders);
 }
 
-void UUpgradeManagerSubsystem::LoadCatalog()
+void UUpgradeManagerSubsystem::LoadCatalog(TArray<UUpgradeDataProvider*> RequiredProviders)
 {
-        if (DataProviders.Num() == 0)      return;
+        if (RequiredProviders.Num() == 0)	return;
+	
         UpgradeCatalog.Empty();
         ResourceTypes.Empty();
 
-        for (UUpgradeDataProvider* Provider : DataProviders)
+        for (UUpgradeDataProvider* Provider : RequiredProviders)
         {
                 if (!Provider) continue;
                 Provider->InitializeData(UpgradeCatalog, ResourceTypes);
-
         }
 }
 

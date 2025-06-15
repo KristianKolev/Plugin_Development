@@ -20,6 +20,11 @@ public:
      */
     virtual TArray<UUpgradeDataProvider*> Scan(const FString& FolderPath);
 
+    // Currently supported Data Tables and Data Assets
+    virtual void ScanForAssets(const FString& FolderPath, TArray<UUpgradeDataProvider*>& Providers);
+    // Currently supported JSON
+    virtual void ScanForFiles(const FString& FolderPath, TArray<UUpgradeDataProvider*>& Providers);
+
     /**
      * Initializes upgrade-related data using any assets/files gathered by Scan().
      *
@@ -39,15 +44,5 @@ protected:
     TArray<FString> DetectedFiles;
     
     // Helper function to add a resource type to the resource type array if it doesn't already exist.
-    virtual int32 AddOrFindRequiredResourceTypeIndex(const FName& ResourceType, TArray<FName>& ResourceTypes)
-    {
-        int32 FoundIndex = ResourceTypes.IndexOfByKey(ResourceType);
-        if (FoundIndex != INDEX_NONE)
-        {
-            return FoundIndex;
-        }
-        int32 NewIndex = ResourceTypes.Num();
-        ResourceTypes.Add(ResourceType);
-        return NewIndex;
-    }
+    virtual int32 AddOrFindRequiredResourceTypeIndex(const FName& ResourceType, TArray<FName>& ResourceTypes);
 };

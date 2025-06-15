@@ -18,11 +18,17 @@ TArray<UUpgradeDataProvider*> UUpgradeDataProvider::Scan(const FString& FolderPa
     {
         AssetPath = FPaths::Combine(TEXT("/Game"), AssetPath);
     }
+    ScanForAssets(AssetPath, Providers);
+    ScanForFiles(AssetPath, Providers);
+    return Providers;
+}
 
+void UUpgradeDataProvider::ScanForAssets(const FString& FolderPath, TArray<UUpgradeDataProvider*>& Providers)
+{
     // Gather all assets in one pass
     TArray<FAssetData> AssetsInFolder;
     FAssetRegistryModule& RegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
-    RegistryModule.Get().GetAssetsByPath(FName(*AssetPath), AssetsInFolder, /*bRecursive=*/true);
+    RegistryModule.Get().GetAssetsByPath(FName(*FolderPath), AssetsInFolder, /*bRecursive=*/true);
 
     // Map asset class path to provider class for easy extension
     const TMap<FTopLevelAssetPath, TSubclassOf<UUpgradeDataProvider>> ClassToProvider = {
@@ -48,9 +54,12 @@ TArray<UUpgradeDataProvider*> UUpgradeDataProvider::Scan(const FString& FolderPa
         Provider->DetectedAssets = Pair.Value;
         Providers.Add(Provider);
     }
+}
 
+void UUpgradeDataProvider::ScanForFiles(const FString& FolderPath, TArray<UUpgradeDataProvider*>& Providers)
+{
     // Gather JSON files
-    FString DiskPath = FPackageName::LongPackageNameToFilename(AssetPath);
+    FString DiskPath = FPackageName::LongPackageNameToFilename(FolderPath);
     TArray<FString> JsonFiles;
     IFileManager::Get().FindFilesRecursive(JsonFiles, *DiskPath, TEXT("*.json"), true, false);
 
@@ -60,7 +69,16 @@ TArray<UUpgradeDataProvider*> UUpgradeDataProvider::Scan(const FString& FolderPa
         JsonProvider->DetectedFiles = JsonFiles;
         Providers.Add(JsonProvider);
     }
-
-    return Providers;
 }
 
+int32 UUpgradeDataProvider::AddOrFindRequiredResourceTypeIndex(const FName& ResourceType, TArray<FName>& ResourceTypes)
+{
+    int32 FoundIndex = ResourceTypes.IndexOfByKey(ResourceType);
+    
+    if (FoundIndex != INDEX_NONE)   return FoundIndex;
+    
+    int32 NewIndex = ResourceTypes.Num();
+    ResourceTypes.Add(ResourceType);
+    
+    return NewIndex;
+}

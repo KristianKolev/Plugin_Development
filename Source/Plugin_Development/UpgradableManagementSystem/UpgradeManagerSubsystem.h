@@ -22,8 +22,8 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
-	
-       void InitializeProviders();
+
+	TArray<UUpgradeDataProvider*> InitializeProviders();
 	int32 RegisterUpgradableComponent(UUpgradableComponent* Component);
 	void UnregisterUpgradableComponent(int32 ComponentId);
 	
@@ -175,14 +175,14 @@ protected:
 	UPROPERTY()
 	TArray<int32> FreeComponentIndices;
 
-	UPROPERTY()
-	FString UpgradeDataFolderPath;
+	// UPROPERTY()
+	// FString UpgradeDataFolderPath;
 
-       UPROPERTY()
-       TArray<TObjectPtr<UUpgradeDataProvider>> DataProviders;
+   // UPROPERTY()
+   // TArray<TObjectPtr<UUpgradeDataProvider>> DataProviders;
 
 	// Loaders
-	void LoadCatalog();
+	void LoadCatalog(TArray<UUpgradeDataProvider*> RequiredProviders);
 
 	// Resource functions
 	
