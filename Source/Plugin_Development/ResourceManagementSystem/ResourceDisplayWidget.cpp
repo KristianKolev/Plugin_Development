@@ -32,23 +32,18 @@ void UResourceDisplayWidget::BuildResourceEntries()
     ResourceListBox->ClearChildren();
     ResourceEntries.Empty();
 
-    if (UWorld* World = GetWorld())
+    TMap<FName, int32> AllResources;
+    ResourceComp->GetAllResources(AllResources);
+
+    for (auto& Pair : AllResources)
     {
-        if (UResourceManagerSubsystem* Sub = World->GetSubsystem<UResourceManagerSubsystem>())
+        UTextBlock* Entry = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass());
+        if (Entry)
         {
-            TMap<FName, int32> AllResources;
-            Sub->GetAllResources(ResourceComp, AllResources);
-            for (auto& Pair : AllResources)
-            {
-                UTextBlock* Entry = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass());
-                if (Entry)
-                {
-                    FString EntryText = FString::Printf(TEXT("%s: %d"), *Pair.Key.ToString(), Pair.Value);
-                    Entry->SetText(FText::FromString(EntryText));
-                    ResourceListBox->AddChild(Entry);
-                    ResourceEntries.Add(Pair.Key, Entry);
-                }
-            }
+            FString EntryText = FString::Printf(TEXT("%s: %d"), *Pair.Key.ToString(), Pair.Value);
+            Entry->SetText(FText::FromString(EntryText));
+            ResourceListBox->AddChild(Entry);
+            ResourceEntries.Add(Pair.Key, Entry);
         }
     }
 }

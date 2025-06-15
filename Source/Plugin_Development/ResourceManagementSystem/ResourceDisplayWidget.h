@@ -9,7 +9,6 @@
 
 class UVerticalBox;
 class UTextBlock;
-class UResourceComponent;
 
 /**
  * 
