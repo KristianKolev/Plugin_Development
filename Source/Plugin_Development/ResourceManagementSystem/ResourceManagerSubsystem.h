@@ -6,6 +6,9 @@
 #include "ResourceDefinition.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "ResourceSystemComponent.h"
+#include "Logging/LogMacros.h"
+
+DECLARE_LOG_CATEGORY_EXTERN(LogResourceSystem, Log, All);
 #include "ResourceManagerSubsystem.generated.h"
 
 USTRUCT(BlueprintType)

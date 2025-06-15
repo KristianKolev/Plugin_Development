@@ -4,6 +4,9 @@
 #include "UpgradeDataAssetProvider.h"
 #include "UpgradeDataTableProvider.h"
 #include "UpgradeJsonProvider.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Engine/DataTable.h"
+#include "UpgradeDefinitionDataAsset.h"
 #include "UpgradeSettings.h"
 #include "TimerManager.h"
 #include "Engine/World.h"
@@ -42,6 +45,7 @@ void UUpgradeManagerSubsystem::InitializeProviders()
                        DataProviders.Add(Provider);
                }
        }
+
 }
 
 void UUpgradeManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
@@ -61,6 +65,7 @@ void UUpgradeManagerSubsystem::LoadCatalog()
         {
                 if (!Provider) continue;
                 Provider->InitializeData(UpgradeCatalog, ResourceTypes);
+
         }
 }
 
