@@ -19,56 +19,54 @@ void UResourceManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	ComponentResourceMap.Empty();
 	Definitions.Empty();
 	
-        const FString ScanPath = TEXT("/Game/Data/Resources");
-        UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_01] Scanning folder %s for any assets"), *ScanPath);
+    const FString ScanPath = TEXT("/Game/Data/Resources");
+    UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_01] Scanning folder %s for any assets"), *ScanPath);
 
 	// Query AssetRegistry for all assets under that path
 	FAssetRegistryModule& RegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 	TArray<FAssetData> AssetsInFolder;
-        RegistryModule.Get().GetAssetsByPath(FName(*ScanPath), AssetsInFolder, /*bRecursive=*/true);
-        UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_02] Found %d assets under %s"), AssetsInFolder.Num(), *ScanPath);
+    RegistryModule.Get().GetAssetsByPath(FName(*ScanPath), AssetsInFolder, /*bRecursive=*/true);
+    UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_02] Found %d assets under %s"), AssetsInFolder.Num(), *ScanPath);
     
 	if (AssetsInFolder.Num() == 0)
 	{
-                UE_LOG(LogResourceSystem, Warning, TEXT("[RESOURCEMGR_ERR_00] No assets found in path: '%s'"), *ScanPath);
+        UE_LOG(LogResourceSystem, Warning, TEXT("[RESOURCEMGR_ERR_00] No assets found in path: '%s'"), *ScanPath);
 		return;
 	}
 	
 	// 3) Try casting each one to UResourceDefinition
 	for (const FAssetData& AssetData : AssetsInFolder)
 	{
-		if (AssetData.AssetClassPath != UResourceDefinition::StaticClass()->GetClassPathName())
-			continue;
+		if (AssetData.AssetClassPath != UResourceDefinition::StaticClass()->GetClassPathName()) continue;
 		
 		UResourceDefinition* Asset = Cast<UResourceDefinition>(AssetData.GetAsset());
 		if (!Asset)
 		{
-                UE_LOG(LogResourceSystem, Warning, TEXT("[RESOURCEMGR_ERR_01] Failed to load UResourceDefinition '%s'"),
-                        *AssetData.ObjectPath.ToString());
+            UE_LOG(LogResourceSystem, Warning, TEXT("[RESOURCEMGR_ERR_01] Failed to load UResourceDefinition '%s'"),
+				*AssetData.ObjectPath.ToString());
 			continue;
 		}
 		
 		if (Definitions.Contains(Asset->ResourceName))
 		{
-                        UE_LOG(LogResourceSystem, Warning, TEXT("[RESOURCEMGR_ERR_02] Duplicate ResourceName '%s' in %s"),
-                                *Asset->ResourceName.ToString(), *AssetData.ObjectPath.ToString());
-                }
-                Definitions.Add(Asset->ResourceName, Asset);
-                UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_03] Registered Definition '%s' (Name: %s)"),
-                        *AssetData.AssetName.ToString(), *Asset->ResourceName.ToString());
-		
+	        UE_LOG(LogResourceSystem, Warning, TEXT("[RESOURCEMGR_ERR_02] Duplicate ResourceName '%s' in %s"),
+	        	*Asset->ResourceName.ToString(), *AssetData.ObjectPath.ToString());
+        }
+        Definitions.Add(Asset->ResourceName, Asset);
+        UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_03] Registered Definition '%s' (Name: %s)"),
+        	*AssetData.AssetName.ToString(), *Asset->ResourceName.ToString());
 	}
-
-        if (Definitions.Num() == 0)
-        {
-                UE_LOG(LogResourceSystem, Warning, TEXT("[RESOURCEMGR_ERR_03] No UResourceDefinition assets found after scanning %s!"),
-                        *ScanPath);
-        }
-        else
-        {
-                UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_04] Registered %d resource definitions from '%s'"),
-                        Definitions.Num(), *ScanPath);
-        }
+	
+    if (Definitions.Num() == 0)
+    {
+        UE_LOG(LogResourceSystem, Warning, TEXT("[RESOURCEMGR_ERR_03] No UResourceDefinition assets found after scanning %s!"),
+			*ScanPath);
+    }
+    else
+    {
+        UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_04] Registered %d resource definitions from '%s'"),
+			Definitions.Num(), *ScanPath);
+    }
 }
 
 void UResourceManagerSubsystem::Deinitialize()
@@ -85,38 +83,39 @@ void UResourceManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 
 void UResourceManagerSubsystem::RegisterComponent(UResourceSystemComponent* Comp)
 {
-        // Only register on server-authoritative side
-        if (Comp && GetWorld()->GetAuthGameMode())
-        {
-                ComponentResourceMap.FindOrAdd(Comp);
-                UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_05] Registered component %s"), *Comp->GetName());
-
-        }
+    // Only register on server-authoritative side
+    if (Comp && GetWorld()->GetAuthGameMode())
+    {
+        ComponentResourceMap.FindOrAdd(Comp);
+        UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_05] Registered component %s"), *Comp->GetName());
+	}
 }
 
 void UResourceManagerSubsystem::UnregisterComponent(UResourceSystemComponent* Comp)
 {
-        if (Comp && GetWorld()->GetAuthGameMode())
-        {
-                ComponentResourceMap.Remove(Comp);
-                UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_06] Unregistered component %s"), *Comp->GetName());
-
-        }
+    if (Comp && GetWorld()->GetAuthGameMode())
+    {
+        ComponentResourceMap.Remove(Comp);
+        UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_06] Unregistered component %s"), *Comp->GetName());
+    }
 }
-
 
 void UResourceManagerSubsystem::AddResource(UResourceSystemComponent* ResourceComponent, FName ResourceName, int32 Amount)
 {
-        if (!GetWorld()->GetAuthGameMode() || !ResourceComponent || Amount <= 0) return;
+    if (!GetWorld()->GetAuthGameMode() || !ResourceComponent || Amount <= 0) return;
 
-        FResourceBucket& Bucket = ComponentResourceMap.FindOrAdd(ResourceComponent);
-        int32& CurrentAmount = Bucket.Resources.FindOrAdd(ResourceName);
-        const int32 OldAmount = CurrentAmount;
-        CurrentAmount += Amount;
-        UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_07] Added %d of '%s' to %s (old: %d, new: %d, diff: +%d)"),
-
-                Amount, *ResourceName.ToString(), *ResourceComponent->GetName(), OldAmount, CurrentAmount, Amount);
-
+    FResourceBucket& Bucket = ComponentResourceMap.FindOrAdd(ResourceComponent);
+    int32& CurrentAmount = Bucket.Resources.FindOrAdd(ResourceName);
+    const int32 OldAmount = CurrentAmount;
+    CurrentAmount += Amount;
+	
+	// We anticipate many enemies dying frequently and calling this functions often. This log is only for diagnostics,
+	// it is not needed often.
+    if (UE_LOG_ACTIVE(LogResourceSystem, Verbose))
+    {
+        UE_LOG(LogResourceSystem, Verbose, TEXT("[RESOURCEMGR_INFO_07] Added %d of '%s' to %s (old: %d, new: %d, diff: +%d)"),
+			Amount, *ResourceName.ToString(), *ResourceComponent->GetName(), OldAmount, CurrentAmount, Amount);
+    }
 	//ResourceComponent->OnResourceChanged.Broadcast(ResourceName, CurrentAmount, Amount);
 	ResourceComponent->Client_UpdateResource(ResourceName, CurrentAmount, Amount);
 }
@@ -152,7 +151,6 @@ bool UResourceManagerSubsystem::SpendResource(UResourceSystemComponent* Resource
     if (!Bucket)
     {
         UE_LOG(LogResourceSystem, Warning, TEXT("[RESOURCEMGR_ERR_04] Component %s has no resource bucket"), *ResourceComponent->GetName());
-
         return false;
     }
 
@@ -160,21 +158,20 @@ bool UResourceManagerSubsystem::SpendResource(UResourceSystemComponent* Resource
     if (!CurrentAmount)
     {
         UE_LOG(LogResourceSystem, Warning, TEXT("[RESOURCEMGR_ERR_05] Resource '%s' not found for component %s"), *ResourceName.ToString(), *ResourceComponent->GetName());
-
         return false;
     }
     if (*CurrentAmount < Amount)
     {
-        UE_LOG(LogResourceSystem, Warning, TEXT("[RESOURCEMGR_ERR_06] Not enough '%s' for component %s (have: %d, need: %d)"), *ResourceName.ToString(), *ResourceComponent->GetName(), *CurrentAmount, Amount);
-
+        UE_LOG(LogResourceSystem, Warning, TEXT("[RESOURCEMGR_ERR_06] Not enough '%s' for component %s (have: %d, need: %d)"),
+        	*ResourceName.ToString(), *ResourceComponent->GetName(), *CurrentAmount, Amount);
         return false;
     }
 
     const int32 OldAmount = *CurrentAmount;
     *CurrentAmount -= Amount;
-    UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_08] Spent %d of '%s' from %s (old: %d, new: %d, diff: -%d)"), Amount, *ResourceName.ToString(), *ResourceComponent->GetName(), OldAmount, *CurrentAmount, Amount);
-
-
+    UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_08] Spent %d of '%s' from %s (old: %d, new: %d, diff: -%d)"),
+    	Amount, *ResourceName.ToString(), *ResourceComponent->GetName(), OldAmount, *CurrentAmount, Amount);
+	
     //ResourceComponent->OnResourceChanged.Broadcast(ResourceName, *CurrentAmount, (Amount * -1));
     ResourceComponent->Client_UpdateResource(ResourceName, *CurrentAmount, (Amount * -1));
     return true;
@@ -182,10 +179,7 @@ bool UResourceManagerSubsystem::SpendResource(UResourceSystemComponent* Resource
 
 UResourceDefinition* UResourceManagerSubsystem::GetDefinition(FName ResourceName) const
 {
-	if (Definitions.Contains(ResourceName))
-	{
-		return Definitions[ResourceName];
-	}
-	return nullptr;
+	if (Definitions.Contains(ResourceName))	return Definitions[ResourceName];
 	
+	return nullptr;
 }
