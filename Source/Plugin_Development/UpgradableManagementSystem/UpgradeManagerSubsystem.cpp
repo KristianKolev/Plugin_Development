@@ -22,47 +22,46 @@ void UUpgradeManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UUpgradeManagerSubsystem::Deinitialize()
 {
-	DataProvider = nullptr;
-	Super::Deinitialize();
+        DataProviders.Empty();
+        Super::Deinitialize();
 }
 
-void UUpgradeManagerSubsystem::InitializeProvider()
+void UUpgradeManagerSubsystem::InitializeProviders()
 {
-	const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
-	switch (Settings->CatalogSource)
-	{
-	case EUpgradeCatalogSource::JsonFolder:
-		DataProvider = NewObject<UUpgradeJsonProvider>(this);
-		UpgradeDataFolderPath = FPaths::ProjectContentDir() / Settings->JsonFolderPath;
-		break;
-	case EUpgradeCatalogSource::DataTableFolder:
-		DataProvider = NewObject<UUpgradeDataTableProvider>(this);
-		UpgradeDataFolderPath = Settings->DataTableFolderPath;
-		break;
-	case EUpgradeCatalogSource::DataAssetFolder:
-		DataProvider = NewObject<UUpgradeDataAssetProvider>(this);
-		UpgradeDataFolderPath = Settings->DataAssetFolderPath;
-		break;
-	default:
-		DataProvider = nullptr;
-		UpgradeDataFolderPath = TEXT("INVALID PATH");
-		UE_LOG(LogTemp, Warning, TEXT("[UPGRADECATALOG_ERR_01] Invalid catalog source"));
-		break;
-	}
+        const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
+        UpgradeDataFolderPath = Settings->UpgradeDataFolderPath;
+
+       DataProviders.Empty();
+
+       UUpgradeDataProvider* Scanner = NewObject<UUpgradeDataProvider>(this);
+       TArray<UUpgradeDataProvider*> FoundProviders = Scanner->Scan(UpgradeDataFolderPath);
+       for (UUpgradeDataProvider* Provider : FoundProviders)
+       {
+               if (Provider)
+               {
+                       DataProviders.Add(Provider);
+               }
+       }
 }
 
 void UUpgradeManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
-	Super::OnWorldBeginPlay(InWorld);
-	InitializeProvider();
-	LoadCatalog();
+        Super::OnWorldBeginPlay(InWorld);
+        InitializeProviders();
+        LoadCatalog();
 }
 
 void UUpgradeManagerSubsystem::LoadCatalog()
 {
-	if (!DataProvider)	return;
-	UpgradeCatalog.Empty();
-	DataProvider->InitializeData(UpgradeDataFolderPath, UpgradeCatalog, ResourceTypes);
+        if (DataProviders.Num() == 0)      return;
+        UpgradeCatalog.Empty();
+        ResourceTypes.Empty();
+
+        for (UUpgradeDataProvider* Provider : DataProviders)
+        {
+                if (!Provider) continue;
+                Provider->InitializeData(UpgradeCatalog, ResourceTypes);
+        }
 }
 
 int32 UUpgradeManagerSubsystem::RegisterUpgradableComponent(UUpgradableComponent* Component)

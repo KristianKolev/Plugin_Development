@@ -7,10 +7,11 @@
 UCLASS()
 class PLUGIN_DEVELOPMENT_API UUpgradeDataAssetProvider : public UUpgradeDataProvider
 {
-	GENERATED_BODY()
-	
+        GENERATED_BODY()
+
 public:
-	UUpgradeDataAssetProvider();
-	
-	virtual void InitializeData(const FString& FolderPath, TMap<FName, TArray<FUpgradeDefinition>>& OutCatalog, TArray<FName>& OutResourceTypes) override;
+        UUpgradeDataAssetProvider();
+
+        virtual void InitializeData(TMap<FName, TArray<FUpgradeDefinition>>& OutCatalog,
+                                     TArray<FName>& OutResourceTypes) override;
 };
