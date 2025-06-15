@@ -50,7 +50,15 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
                         PathId = FName(*FPaths::GetBaseFilename(File));
                         UE_LOG(LogTemp, Verbose, TEXT("[UPGRADEJSON_INFO_02] Using filename '%s' as UpgradePathId for file: %s"), *PathId.ToString(), *File);
                 }
-		TArray<FUpgradeDefinition>& LevelDataArray = OutCatalog.FindOrAdd(PathId);
+                TArray<FUpgradeDefinition>* ExistingArray = OutCatalog.Find(PathId);
+                if (ExistingArray)
+                {
+                        UE_LOG(LogTemp, Warning, TEXT("[UPGRADECATALOG_WARN_01] Duplicate UpgradePath '%s' found in JSON file '%s'. Overriding previous data."),
+                               *PathId.ToString(), *FPaths::GetCleanFilename(File));
+                        ExistingArray->Reset();
+                }
+
+                TArray<FUpgradeDefinition>& LevelDataArray = OutCatalog.FindOrAdd(PathId);
 
 		// Extract levels array
 		const TArray<TSharedPtr<FJsonValue>>* Levels;

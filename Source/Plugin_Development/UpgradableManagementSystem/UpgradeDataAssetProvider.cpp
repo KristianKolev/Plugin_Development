@@ -36,6 +36,15 @@ void UUpgradeDataAssetProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
         
         // Fallback to asset name if no UpgradePathId is set
         FName PathId = !Asset->UpgradePathId.IsNone() ? Asset->UpgradePathId : AssetData.AssetName;
+
+        TArray<FUpgradeDefinition>* ExistingArray = OutCatalog.Find(PathId);
+        if (ExistingArray)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[UPGRADECATALOG_WARN_01] Duplicate UpgradePath '%s' found in asset '%s'. Overriding previous data."),
+                   *PathId.ToString(), *AssetData.AssetName.ToString());
+            ExistingArray->Reset();
+        }
+
         TArray<FUpgradeDefinition>& LevelDataArray = OutCatalog.FindOrAdd(PathId);
 
         int32 ProcessedLevels = 0;
