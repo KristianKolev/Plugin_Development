@@ -1,26 +1,26 @@
 #include "UpgradeDataAssetProvider.h"
-#include "AssetRegistry/AssetRegistryModule.h"
 #include "UpgradeDefinitionDataAsset.h"
+#include "AssetRegistry/AssetData.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Modules/ModuleManager.h"
+#include "Misc/Paths.h"
+
 
 UUpgradeDataAssetProvider::UUpgradeDataAssetProvider()
 {
 }
 
-void UUpgradeDataAssetProvider::InitializeData(const FString& FolderPath, TMap<FName, TArray<FUpgradeDefinition>>& OutCatalog, TArray<FName>& OutResourceTypes)
+
+void UUpgradeDataAssetProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>>& OutCatalog, TArray<FName>& OutResourceTypes)
 {
-    // Query AssetRegistry for all assets under that path
-    FAssetRegistryModule& RegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-    TArray<FAssetData> AssetsInFolder;
-    RegistryModule.Get().GetAssetsByPath(FName(*FolderPath), AssetsInFolder, /*bRecursive=*/true);
-    
-    if (AssetsInFolder.Num() == 0)
+    if (DetectedAssets.Num() == 0)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[UPGRADEASSET_ERR_00] No assets found in path: '%s'"), *FolderPath);
+        UE_LOG(LogTemp, Warning, TEXT("[UPGRADEASSET_ERR_00] No UpgradeDefinitionDataAssets provided"));
         return;
     }
- 
+
     int32 LoadedAssets = 0;
-    for (const FAssetData& AssetData : AssetsInFolder)
+    for (const FAssetData& AssetData : DetectedAssets)
     {
         if (AssetData.AssetClassPath != UUpgradeDefinitionDataAsset::StaticClass()->GetClassPathName())
             continue;
@@ -78,10 +78,10 @@ void UUpgradeDataAssetProvider::InitializeData(const FString& FolderPath, TMap<F
     // Check if any Data Assets were actually loaded
     if (LoadedAssets == 0)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[UPGRADEASSET_ERR_04] No UpgradeDefinitionDataAssets found in path: '%s'"), *FolderPath);
+        UE_LOG(LogTemp, Warning, TEXT("[UPGRADEASSET_ERR_04] No UpgradeDefinitionDataAssets processed"));
         return;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("[UPGRADEASSET_INFO_02] Loaded %d Data Assets from '%s' (found %d PathIds)"),
-        LoadedAssets, *FolderPath, OutCatalog.Num());
+    UE_LOG(LogTemp, Log, TEXT("[UPGRADEASSET_INFO_02] Loaded %d Data Assets (found %d PathIds)"),
+        LoadedAssets, OutCatalog.Num());
 }

@@ -34,54 +34,18 @@ void UUpgradeManagerSubsystem::InitializeProviders()
         const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
         UpgradeDataFolderPath = Settings->UpgradeDataFolderPath;
 
-        DataProviders.Empty();
+       DataProviders.Empty();
 
-        FString AssetPath = UpgradeDataFolderPath;
-        if (!AssetPath.StartsWith(TEXT("/Game")))
-        {
-                AssetPath = FPaths::Combine(TEXT("/Game"), AssetPath);
-        }
+       UUpgradeDataProvider* Scanner = NewObject<UUpgradeDataProvider>(this);
+       TArray<UUpgradeDataProvider*> FoundProviders = Scanner->Scan(UpgradeDataFolderPath);
+       for (UUpgradeDataProvider* Provider : FoundProviders)
+       {
+               if (Provider)
+               {
+                       DataProviders.Add(Provider);
+               }
+       }
 
-        FString JsonDiskPath = FPackageName::LongPackageNameToFilename(AssetPath);
-        TArray<FString> JsonFiles;
-        IFileManager::Get().FindFilesRecursive(JsonFiles, *JsonDiskPath, TEXT("*.json"), true, false);
-
-        FAssetRegistryModule& RegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
-        TArray<FAssetData> AssetsInFolder;
-        RegistryModule.Get().GetAssetsByPath(FName(*AssetPath), AssetsInFolder, /*bRecursive=*/true);
-
-        // Map asset class to provider class for easy extension
-        TMap<FName, TSubclassOf<UUpgradeDataProvider>> AssetProviderMap;
-        AssetProviderMap.Add(UDataTable::StaticClass()->GetClassPathName(), UUpgradeDataTableProvider::StaticClass());
-        AssetProviderMap.Add(UUpgradeDefinitionDataAsset::StaticClass()->GetClassPathName(), UUpgradeDataAssetProvider::StaticClass());
-
-        TSet<TSubclassOf<UUpgradeDataProvider>> ProvidersToCreate;
-
-        if (JsonFiles.Num() > 0)
-        {
-                ProvidersToCreate.Add(UUpgradeJsonProvider::StaticClass());
-        }
-
-        for (const FAssetData& AssetData : AssetsInFolder)
-        {
-                if (const TSubclassOf<UUpgradeDataProvider>* ProviderClass = AssetProviderMap.Find(AssetData.AssetClassPath))
-                {
-                        ProvidersToCreate.Add(*ProviderClass);
-                }
-        }
-
-        for (TSubclassOf<UUpgradeDataProvider> ProviderClass : ProvidersToCreate)
-        {
-                if (!ProviderClass)
-                        continue;
-
-                DataProviders.Add(NewObject<UUpgradeDataProvider>(this, ProviderClass));
-        }
-
-        if (DataProviders.Num() == 0)
-        {
-                UE_LOG(LogTemp, Warning, TEXT("[UPGRADECATALOG_ERR_01] No upgrade data found in %s"), *AssetPath);
-        }
 }
 
 void UUpgradeManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
@@ -97,25 +61,11 @@ void UUpgradeManagerSubsystem::LoadCatalog()
         UpgradeCatalog.Empty();
         ResourceTypes.Empty();
 
-        FString AssetPath = UpgradeDataFolderPath;
-        if (!AssetPath.StartsWith(TEXT("/Game")))
-        {
-                AssetPath = FPaths::Combine(TEXT("/Game"), AssetPath);
-        }
-
-        // Map provider class to folder path transformation
-        TMap<UClass*, FString> ProviderPathMap;
-        ProviderPathMap.Add(UUpgradeJsonProvider::StaticClass(), FPackageName::LongPackageNameToFilename(AssetPath));
-        ProviderPathMap.Add(UUpgradeDataTableProvider::StaticClass(), AssetPath);
-        ProviderPathMap.Add(UUpgradeDataAssetProvider::StaticClass(), AssetPath);
-
         for (UUpgradeDataProvider* Provider : DataProviders)
         {
                 if (!Provider) continue;
+                Provider->InitializeData(UpgradeCatalog, ResourceTypes);
 
-                const FString* UsePath = ProviderPathMap.Find(Provider->GetClass());
-                const FString& FinalPath = UsePath ? *UsePath : AssetPath;
-                Provider->InitializeData(FinalPath, UpgradeCatalog, ResourceTypes);
         }
 }
 

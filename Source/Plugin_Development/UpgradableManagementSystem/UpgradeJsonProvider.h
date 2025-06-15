@@ -7,8 +7,9 @@
 UCLASS()
 class PLUGIN_DEVELOPMENT_API UUpgradeJsonProvider : public UUpgradeDataProvider
 {
-	GENERATED_BODY()
+        GENERATED_BODY()
 public:
        UUpgradeJsonProvider();
-       virtual void InitializeData(const FString& FolderPath, TMap<FName, TArray<FUpgradeDefinition>>& OutCatalog, TArray<FName>& OutResourceTypes) override;
+       virtual void InitializeData(TMap<FName, TArray<FUpgradeDefinition>>& OutCatalog,
+                                   TArray<FName>& OutResourceTypes) override;
 };

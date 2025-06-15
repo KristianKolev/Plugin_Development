@@ -20,7 +20,9 @@ A modular framework for prototyping, testing, and packaging Unreal Engine gamepl
 A data‑driven upgrade framework that lets any actor gain leveling, ranking, or tiered progression:
 
 * **Component + Subsystem**: drop `UUpgradableComponent` onto actors; `UUpgradeManagerSubsystem` handles level state, validation, and timers.
-* **Flexible Data Providers**: drop JSON files, DataTables or DataAssets into a single folder and the subsystem will autodetect them.
+
+* **Flexible Data Providers**: drop JSON files, DataTables or DataAssets into a single folder. The subsystem scans once and instantiates the providers required for the detected data types.
+
 * **Dynamic Resource Interning**: at runtime, any `FName` resource type is interned into a shared array for minimal memory and fast lookups.
 * **Enum‑driven**: extend `EUpgradableAspect` to add your custom upgrade progression types (e.g. Level, Tier, Rank). Extend `EUpgradableCategopry` e.g. Unit, Building, Equipment.
 * **Blueprint & C++ API**: high‑level calls such as `RequestUpgradeForActor`, `GetUpgradeLevelForActor`, or batch queries by aspect or path.
@@ -37,6 +39,11 @@ A data‑driven upgrade framework that lets any actor gain leveling, ranking, or
 ## Configuration
 
 Open **Project Settings → Upgrade System Settings** and set the single folder that contains your upgrade definition files.
+
+
+On startup the subsystem scans this folder once and creates provider instances for every supported data type found. Those providers then parse the results.
+Provider detection is driven by a mapping of asset classes to provider types, so adding support for new data formats only requires updating this map.
+
 
 1. **JSON files**: each file defines an `UpgradePath` (e.g. BasicUnit, AdvancedBuilding, Ring) and a `levels` array with resource costs, upgrade durations, and locked status. Field names can be customized in the **Json Field Names** section of the settings if your JSON schema uses different names.
 2. **DataTables**: `UpgradePath` should be the table's name and each row struct (`FUpgradeDefinition`) represents one level.

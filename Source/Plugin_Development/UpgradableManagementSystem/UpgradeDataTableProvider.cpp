@@ -1,26 +1,26 @@
 #include "UpgradeDataTableProvider.h"
 #include "Engine/DataTable.h"
+#include "AssetRegistry/AssetData.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Modules/ModuleManager.h"
+#include "Misc/Paths.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 
 UUpgradeDataTableProvider::UUpgradeDataTableProvider()
 {
 }
 
-void UUpgradeDataTableProvider::InitializeData(const FString& FolderPath, TMap<FName, TArray<FUpgradeDefinition>>& OutCatalog, TArray<FName>& OutResourceTypes)
-{
-    FAssetRegistryModule& RegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-    TArray<FAssetData> AssetsInFolder;
-    RegistryModule.Get().GetAssetsByPath(FName(*FolderPath), AssetsInFolder, /*bRecursive=*/true);
 
-    // Check if any assets were found
-    if (AssetsInFolder.Num() == 0)
+void UUpgradeDataTableProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>>& OutCatalog, TArray<FName>& OutResourceTypes)
+{
+    if (DetectedAssets.Num() == 0)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[UPGRADETABLE_ERR_00] No assets found in path: '%s'"), *FolderPath);
+        UE_LOG(LogTemp, Warning, TEXT("[UPGRADETABLE_ERR_00] No DataTable assets provided"));
         return;
     }
 
     int32 LoadedTables = 0;
-    for (const FAssetData& AssetData : AssetsInFolder)
+    for (const FAssetData& AssetData : DetectedAssets)
     {
         if (AssetData.AssetClassPath != UDataTable::StaticClass()->GetClassPathName())
             continue;
@@ -65,10 +65,10 @@ void UUpgradeDataTableProvider::InitializeData(const FString& FolderPath, TMap<F
     // Check if any DataTables were actually loaded
     if (LoadedTables == 0)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[UPGRADETABLE_ERR_03] No DataTables found in path: '%s'"), *FolderPath);
+        UE_LOG(LogTemp, Warning, TEXT("[UPGRADETABLE_ERR_03] No DataTables processed"));
         return;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("[UPGRADETABLE_INFO_02] Loaded %d DataTables from '%s' (found %d PathIds)"),
-           LoadedTables, *FolderPath, OutCatalog.Num());
+    UE_LOG(LogTemp, Log, TEXT("[UPGRADETABLE_INFO_02] Loaded %d DataTables (found %d PathIds)"),
+           LoadedTables, OutCatalog.Num());
 }
