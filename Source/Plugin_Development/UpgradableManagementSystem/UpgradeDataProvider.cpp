@@ -8,6 +8,8 @@
 #include "Modules/ModuleManager.h"
 #include "Misc/Paths.h"
 #include "Misc/FileHelper.h"
+#include "Misc/PackageName.h"
+#include "HAL/FileManager.h"
 
 TArray<UUpgradeDataProvider*> UUpgradeDataProvider::Scan(const FString& FolderPath)
 {
@@ -58,16 +60,37 @@ void UUpgradeDataProvider::ScanForAssets(const FString& FolderPath, TArray<UUpgr
 
 void UUpgradeDataProvider::ScanForFiles(const FString& FolderPath, TArray<UUpgradeDataProvider*>& Providers)
 {
-    // Gather JSON files
     FString DiskPath = FPackageName::LongPackageNameToFilename(FolderPath);
-    TArray<FString> JsonFiles;
-    IFileManager::Get().FindFilesRecursive(JsonFiles, *DiskPath, TEXT("*.json"), true, false);
 
-    if (JsonFiles.Num() > 0)
+    // Map file extension to provider class for easy extension
+    const TMap<FString, TSubclassOf<UUpgradeDataProvider>> ExtensionToProvider = {
+        {TEXT("json"), UUpgradeJsonProvider::StaticClass()}
+    };
+
+    // Temporary storage of files grouped by provider class
+    TMap<TSubclassOf<UUpgradeDataProvider>, TArray<FString>> ProviderFiles;
+
+    for (const auto& Pair : ExtensionToProvider)
     {
-        UUpgradeJsonProvider* JsonProvider = NewObject<UUpgradeJsonProvider>(this);
-        JsonProvider->DetectedFiles = JsonFiles;
-        Providers.Add(JsonProvider);
+        if (!Pair.Value) continue;
+
+        TArray<FString> FoundFiles;
+        const FString Wildcard = FString::Printf(TEXT("*.%s"), *Pair.Key);
+        IFileManager::Get().FindFilesRecursive(FoundFiles, *DiskPath, *Wildcard, true, false);
+
+        if (FoundFiles.Num() > 0)
+        {
+            ProviderFiles.FindOrAdd(Pair.Value).Append(FoundFiles);
+        }
+    }
+
+    // Instantiate providers and assign detected files
+    for (const auto& Pair : ProviderFiles)
+    {
+        if (!Pair.Key) continue;
+        UUpgradeDataProvider* Provider = NewObject<UUpgradeDataProvider>(this, *Pair.Key);
+        Provider->DetectedFiles = Pair.Value;
+        Providers.Add(Provider);
     }
 }
 

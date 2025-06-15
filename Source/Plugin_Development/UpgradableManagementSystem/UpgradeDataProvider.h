@@ -22,7 +22,7 @@ public:
 
     // Currently supported Data Tables and Data Assets
     virtual void ScanForAssets(const FString& FolderPath, TArray<UUpgradeDataProvider*>& Providers);
-    // Currently supported JSON
+    // Currently supported files (e.g. JSON). Extend ExtensionToProvider map in ScanForFiles to support more types.
     virtual void ScanForFiles(const FString& FolderPath, TArray<UUpgradeDataProvider*>& Providers);
 
     /**
