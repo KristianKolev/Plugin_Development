@@ -4,6 +4,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Modules/ModuleManager.h"
 #include "Misc/Paths.h"
+#include "UpgradeManagerSubsystem.h"
 
 
 UUpgradeDataAssetProvider::UUpgradeDataAssetProvider()
@@ -15,7 +16,7 @@ void UUpgradeDataAssetProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
 {
     if (DetectedAssets.Num() == 0)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[UPGRADEASSET_ERR_00] No UpgradeDefinitionDataAssets provided"));
+        UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEASSET_ERR_00] No UpgradeDefinitionDataAssets provided"));
         return;
     }
 
@@ -28,7 +29,7 @@ void UUpgradeDataAssetProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
         UUpgradeDefinitionDataAsset* Asset = Cast<UUpgradeDefinitionDataAsset>(AssetData.GetAsset());
         if (!Asset)
         {
-            UE_LOG(LogTemp, Warning, TEXT("[UPGRADEASSET_ERR_01] Failed to load UpgradeDefinitionDataAsset '%s'"), 
+            UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEASSET_ERR_01] Failed to load UpgradeDefinitionDataAsset '%s'"), 
                 *AssetData.ObjectPath.ToString());
             continue;
         }
@@ -40,7 +41,7 @@ void UUpgradeDataAssetProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
         TArray<FUpgradeDefinition>* ExistingArray = OutCatalog.Find(PathId);
         if (ExistingArray)
         {
-            UE_LOG(LogTemp, Warning, TEXT("[UPGRADECATALOG_WARN_01] Duplicate UpgradePath '%s' found in asset '%s'. Overriding previous data."),
+            UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADECATALOG_WARN_01] Duplicate UpgradePath '%s' found in asset '%s'. Overriding previous data."),
                    *PathId.ToString(), *AssetData.AssetName.ToString());
             ExistingArray->Reset();
         }
@@ -54,7 +55,7 @@ void UUpgradeDataAssetProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
             
             if (LevelAsset.UpgradeResourceCosts.Num() == 0)
             {
-                UE_LOG(LogTemp, Warning, TEXT("[UPGRADEASSET_ERR_02] No resource costs defined for level %d in asset '%s'"), 
+                UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEASSET_ERR_02] No resource costs defined for level %d in asset '%s'"), 
                     ProcessedLevels, *AssetData.AssetName.ToString());
                 continue;
             }
@@ -74,12 +75,12 @@ void UUpgradeDataAssetProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
         
         if (ProcessedLevels > 0)
         {
-            UE_LOG(LogTemp, Log, TEXT("[UPGRADEASSET_INFO_01] Successfully processed asset '%s' with %d levels"), 
+            UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEASSET_INFO_01] Successfully processed asset '%s' with %d levels"), 
                 *AssetData.AssetName.ToString(), ProcessedLevels);
         }
         else
         {
-            UE_LOG(LogTemp, Warning, TEXT("[UPGRADEASSET_ERR_03] No valid levels processed in asset '%s'"), 
+            UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEASSET_ERR_03] No valid levels processed in asset '%s'"), 
                 *AssetData.AssetName.ToString());
         }
     }
@@ -87,10 +88,10 @@ void UUpgradeDataAssetProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
     // Check if any Data Assets were actually loaded
     if (LoadedAssets == 0)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[UPGRADEASSET_ERR_04] No UpgradeDefinitionDataAssets processed"));
+        UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEASSET_ERR_04] No UpgradeDefinitionDataAssets processed"));
         return;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("[UPGRADEASSET_INFO_02] Loaded %d Data Assets (found %d PathIds)"),
+    UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEASSET_INFO_02] Loaded %d Data Assets (found %d PathIds)"),
         LoadedAssets, OutCatalog.Num());
 }

@@ -5,6 +5,7 @@
 #include "Modules/ModuleManager.h"
 #include "Misc/Paths.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "UpgradeManagerSubsystem.h"
 
 UUpgradeDataTableProvider::UUpgradeDataTableProvider()
 {
@@ -15,7 +16,7 @@ void UUpgradeDataTableProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
 {
     if (DetectedAssets.Num() == 0)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[UPGRADETABLE_ERR_00] No DataTable assets provided"));
+        UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADETABLE_ERR_00] No DataTable assets provided"));
         return;
     }
 
@@ -28,7 +29,7 @@ void UUpgradeDataTableProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
         UDataTable* Table = Cast<UDataTable>(AssetData.GetAsset());
         if (!Table)
         {
-            UE_LOG(LogTemp, Warning, TEXT("[UPGRADETABLE_ERR_01] Failed to load DataTable '%s'"), *AssetData.ObjectPath.ToString());
+            UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADETABLE_ERR_01] Failed to load DataTable '%s'"), *AssetData.ObjectPath.ToString());
             continue;
         }
         ++LoadedTables;
@@ -38,7 +39,7 @@ void UUpgradeDataTableProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
         TArray<FUpgradeDefinition>* ExistingArray = OutCatalog.Find(PathId);
         if (ExistingArray)
         {
-            UE_LOG(LogTemp, Warning, TEXT("[UPGRADECATALOG_WARN_01] Duplicate UpgradePath '%s' found in DataTable '%s'. Overriding previous data."),
+            UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADECATALOG_WARN_01] Duplicate UpgradePath '%s' found in DataTable '%s'. Overriding previous data."),
                    *PathId.ToString(), *Table->GetName());
             ExistingArray->Reset();
         }
@@ -51,7 +52,7 @@ void UUpgradeDataTableProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
             FUpgradeDefinitionAsset* LevelAsset = reinterpret_cast<FUpgradeDefinitionAsset*>(Pair.Value);
             if (!LevelAsset)
             {
-                UE_LOG(LogTemp, Warning, TEXT("[UPGRADETABLE_ERR_02] Invalid row '%s' in DataTable %s"), *Pair.Key.ToString(), *Table->GetName());
+                UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADETABLE_ERR_02] Invalid row '%s' in DataTable %s"), *Pair.Key.ToString(), *Table->GetName());
                 continue;
             }
 
@@ -68,16 +69,16 @@ void UUpgradeDataTableProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
             LevelArray.Add(LevelData);
             ++ProcessedRows;
         }
-        UE_LOG(LogTemp, Log, TEXT("[UPGRADETABLE_INFO_01] Successfully processed DataTable '%s' with %d rows"), *Table->GetName(), ProcessedRows);
+        UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADETABLE_INFO_01] Successfully processed DataTable '%s' with %d rows"), *Table->GetName(), ProcessedRows);
     }
 
     // Check if any DataTables were actually loaded
     if (LoadedTables == 0)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[UPGRADETABLE_ERR_03] No DataTables processed"));
+        UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADETABLE_ERR_03] No DataTables processed"));
         return;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("[UPGRADETABLE_INFO_02] Loaded %d DataTables (found %d PathIds)"),
+    UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADETABLE_INFO_02] Loaded %d DataTables (found %d PathIds)"),
            LoadedTables, OutCatalog.Num());
 }
