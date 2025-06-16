@@ -3,6 +3,7 @@
 #include "UpgradeDataAssetProvider.h"
 #include "UpgradeJsonProvider.h"
 #include "UpgradeDefinitionDataAsset.h"
+#include "UpgradeManagerSubsystem.h"
 #include "Engine/DataTable.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Modules/ModuleManager.h"
@@ -13,24 +14,28 @@
 
 TArray<UUpgradeDataProvider*> UUpgradeDataProvider::Scan(const FString& FolderPath)
 {
-    TArray<UUpgradeDataProvider*> Providers;
+	TArray<UUpgradeDataProvider*> Providers;
 
-    FString AssetPath = FolderPath;
-    if (!AssetPath.StartsWith(TEXT("/Game")))
-    {
-        AssetPath = FPaths::Combine(TEXT("/Game"), AssetPath);
-    }
-    ScanForAssets(AssetPath, Providers);
-    ScanForFiles(AssetPath, Providers);
-    return Providers;
-}
+	FString AssetPath = FolderPath;
+	if (!AssetPath.StartsWith(TEXT("/Game")))
+	{
+	AssetPath = FPaths::Combine(TEXT("/Game"), AssetPath);
+	}
+	UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEDATA_INFO_01] Scanning folder '%s' for upgrade data"), *AssetPath);
+	ScanForAssets(AssetPath, Providers);
+	ScanForFiles(AssetPath, Providers);
+	UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEDATA_INFO_02] Found %d data providers"), Providers.Num());
+	return Providers;
+	}
 
 void UUpgradeDataProvider::ScanForAssets(const FString& FolderPath, TArray<UUpgradeDataProvider*>& Providers)
 {
-    // Gather all assets in one pass
+	UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEDATA_INFO_03] Scanning assets in '%s'"), *FolderPath);
+	// Gather all assets in one pass
     TArray<FAssetData> AssetsInFolder;
     FAssetRegistryModule& RegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
-    RegistryModule.Get().GetAssetsByPath(FName(*FolderPath), AssetsInFolder, /*bRecursive=*/true);
+	RegistryModule.Get().GetAssetsByPath(FName(*FolderPath), AssetsInFolder, /*bRecursive=*/true);
+	UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEDATA_INFO_04] Found %d asset(s) in '%s'"), AssetsInFolder.Num(), *FolderPath);
 
     // Map asset class path to provider class for easy extension
     const TMap<FTopLevelAssetPath, TSubclassOf<UUpgradeDataProvider>> ClassToProvider = {
@@ -53,14 +58,16 @@ void UUpgradeDataProvider::ScanForAssets(const FString& FolderPath, TArray<UUpgr
     {
         if (!Pair.Key) continue;
         UUpgradeDataProvider* Provider = NewObject<UUpgradeDataProvider>(this, *Pair.Key);
-        Provider->DetectedAssets = Pair.Value;
-        Providers.Add(Provider);
+	Provider->DetectedAssets = Pair.Value;
+	Providers.Add(Provider);
+	UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEDATA_INFO_05] Created provider %s with %d asset(s)"), *Pair.Key->GetName(), Pair.Value.Num());
     }
 }
 
 void UUpgradeDataProvider::ScanForFiles(const FString& FolderPath, TArray<UUpgradeDataProvider*>& Providers)
 {
-    FString DiskPath = FPackageName::LongPackageNameToFilename(FolderPath);
+	FString DiskPath = FPackageName::LongPackageNameToFilename(FolderPath);
+	UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEDATA_INFO_06] Scanning files in '%s'"), *DiskPath);
 
     // Map file extension to provider class for easy extension
     const TMap<FString, TSubclassOf<UUpgradeDataProvider>> ExtensionToProvider = {
@@ -76,7 +83,8 @@ void UUpgradeDataProvider::ScanForFiles(const FString& FolderPath, TArray<UUpgra
 
         TArray<FString> FoundFiles;
         const FString Wildcard = FString::Printf(TEXT("*.%s"), *Pair.Key);
-        IFileManager::Get().FindFilesRecursive(FoundFiles, *DiskPath, *Wildcard, true, false);
+	IFileManager::Get().FindFilesRecursive(FoundFiles, *DiskPath, *Wildcard, true, false);
+	UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEDATA_INFO_07] Found %d '%s' file(s)"), FoundFiles.Num(), *Pair.Key);
 
         if (FoundFiles.Num() > 0)
         {
@@ -89,9 +97,10 @@ void UUpgradeDataProvider::ScanForFiles(const FString& FolderPath, TArray<UUpgra
     {
         if (!Pair.Key) continue;
         UUpgradeDataProvider* Provider = NewObject<UUpgradeDataProvider>(this, *Pair.Key);
-        Provider->DetectedFiles = Pair.Value;
-        Providers.Add(Provider);
-    }
+Provider->DetectedFiles = Pair.Value;
+	Providers.Add(Provider);
+	UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEDATA_INFO_08] Created provider %s with %d file(s)"), *Pair.Key->GetName(), Pair.Value.Num());
+	}
 }
 
 int32 UUpgradeDataProvider::AddOrFindRequiredResourceTypeIndex(const FName& ResourceType, TArray<FName>& ResourceTypes)
@@ -100,8 +109,9 @@ int32 UUpgradeDataProvider::AddOrFindRequiredResourceTypeIndex(const FName& Reso
     
     if (FoundIndex != INDEX_NONE)   return FoundIndex;
     
-    int32 NewIndex = ResourceTypes.Num();
-    ResourceTypes.Add(ResourceType);
-    
-    return NewIndex;
+int32 NewIndex = ResourceTypes.Num();
+	ResourceTypes.Add(ResourceType);
+	UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEDATA_INFO_09] Registered resource type '%s' at index %d"), *ResourceType.ToString(), NewIndex);
+
+	return NewIndex;
 }
