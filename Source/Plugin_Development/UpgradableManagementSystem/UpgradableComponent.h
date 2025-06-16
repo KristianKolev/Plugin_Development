@@ -77,7 +77,6 @@ public:
 	void Client_SetLevel(int32 NewLevel);
 	void Client_SetLevel_Implementation(int32 NewLevel);
 
-
 protected:
 
 	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Upgradable Component|Visuals")
@@ -110,7 +109,5 @@ protected:
 	void Server_RequestUpgrade(int32 LevelIncrease, const TArray<FName>& AvailableResourcesNames, const TArray<int32>& AvailableResourceAmounts);
 	void Server_RequestUpgrade_Implementation(int32 LevelIncrease, const TArray<FName>& AvailableResourcesNames, const TArray<int32>& AvailableResourceAmounts);
 	bool Server_RequestUpgrade_Validate(int32 LevelIncrease, const TArray<FName>& AvailableResourcesNames, const TArray<int32>& AvailableResourceAmounts);
-
-
 	
 };

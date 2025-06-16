@@ -78,5 +78,4 @@ void UResourceDisplayWidget::HandleResourceChanged(FName ResourceName, int32 New
     {
         Entry->SetText(FText::FromString(FString::Printf(TEXT("%s: %d"), *ResourceName.ToString(), DeltaAmount)));
     }
-    
 }

@@ -23,7 +23,6 @@ struct PLUGIN_DEVELOPMENT_API FUpgradeDefinition
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool bUpgradeLocked = false;
-	
 };
 
 USTRUCT(BlueprintType)
@@ -39,7 +38,6 @@ struct PLUGIN_DEVELOPMENT_API FUpgradeDefinitionAsset : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool bUpgradeLocked = false;
-	
 };
 
 USTRUCT(BlueprintType)
@@ -94,6 +92,4 @@ struct PLUGIN_DEVELOPMENT_API FUpgradeInProgressData
 	// Maps each component ID to the level increase requested by the client.
 	UPROPERTY()
 	int32 RequestedLevelIncrease = 1;
-
-
 };
