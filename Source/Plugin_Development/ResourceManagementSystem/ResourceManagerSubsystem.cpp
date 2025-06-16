@@ -87,7 +87,7 @@ void UResourceManagerSubsystem::RegisterComponent(UResourceSystemComponent* Comp
     if (Comp && GetWorld()->GetAuthGameMode())
     {
         ComponentResourceMap.FindOrAdd(Comp);
-        UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_05] Registered component %s"), *Comp->GetName());
+        UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_05] Registered component %s. Total Components %d."), *Comp->GetName(), ComponentResourceMap.Num());
 	}
 }
 
@@ -96,7 +96,7 @@ void UResourceManagerSubsystem::UnregisterComponent(UResourceSystemComponent* Co
     if (Comp && GetWorld()->GetAuthGameMode())
     {
         ComponentResourceMap.Remove(Comp);
-        UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_06] Unregistered component %s"), *Comp->GetName());
+        UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_06] Unregistered component %s. Total Components %d."), *Comp->GetName(), ComponentResourceMap.Num());
     }
 }
 

@@ -7,6 +7,9 @@
 #include "UpgradeDataProvider.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "UpgradeManagerSubsystem.generated.h"
+#include "Logging/LogMacros.h"
+
+DECLARE_LOG_CATEGORY_EXTERN(LogUpgradeSystem, Log, All);
 
 class UUpgradableComponent;
 class UUpgradeJsonProvider;
@@ -186,7 +189,6 @@ protected:
 
 	// Resource functions
 	
-	// Not implemented. Primary usecases focus on 1 level upgrade at a time.
 	TMap<FName, int32> GetUpgradeTotalResourceCost (int32 ComponentId, int32 LevelIncrease) const;
 
 	// Upgrade Timer functions

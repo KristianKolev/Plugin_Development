@@ -1,16 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
-
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "ResourceSystemComponent.generated.h"
 
 class UResourceManagerSubsystem;
-class APlayerState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnResourceChanged, FName, ResourceName, int32, NewAmount, int32, DeltaAmount);
-
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PLUGIN_DEVELOPMENT_API UResourceSystemComponent : public UActorComponent
@@ -19,7 +16,7 @@ class PLUGIN_DEVELOPMENT_API UResourceSystemComponent : public UActorComponent
 
 public:
 	UResourceSystemComponent();
-
+	
 	/** Adds Amount of ResourceName to the owner player's bucket */
 	UFUNCTION(BlueprintCallable, Category="Resource System")
 	void AddResource(FName ResourceName, int32 Amount);
@@ -34,7 +31,7 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Resource System")
 	void GetAllResources(TMap<FName, int32>& OutAvailableResources) const;
-	
+
 	/** Event fired when this player's resource changes - when adding or spending */
 	UPROPERTY(BlueprintAssignable, Category="Resource System")
 	FOnResourceChanged OnResourceChanged;
@@ -59,9 +56,8 @@ protected:
 
 private:
 	TMap<FName, int32> LocalResources;
+	
 	/** Cached pointer to the WorldSubsystem */
 	UResourceManagerSubsystem* GetWorldSubsystem() const;
 
-	/** Handler for subsystem's broadcast, filters by owner */
-	
 };
