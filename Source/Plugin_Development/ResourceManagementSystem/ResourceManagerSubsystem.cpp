@@ -169,9 +169,11 @@ bool UResourceManagerSubsystem::SpendResource(UResourceSystemComponent* Resource
 
     const int32 OldAmount = *CurrentAmount;
     *CurrentAmount -= Amount;
-    UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_08] Spent %d of '%s' from %s (old: %d, new: %d, diff: -%d)"),
-    	Amount, *ResourceName.ToString(), *ResourceComponent->GetName(), OldAmount, *CurrentAmount, Amount);
-	
+    if (UE_LOG_ACTIVE(LogResourceSystem, Verbose))
+    {
+	    UE_LOG(LogResourceSystem, Verbose, TEXT("[RESOURCEMGR_INFO_08] Spent %d of '%s' from %s (old: %d, new: %d, diff: -%d)"),
+	           Amount, *ResourceName.ToString(), *ResourceComponent->GetName(), OldAmount, *CurrentAmount, Amount);
+    }
     //ResourceComponent->OnResourceChanged.Broadcast(ResourceName, *CurrentAmount, (Amount * -1));
     ResourceComponent->Client_UpdateResource(ResourceName, *CurrentAmount, (Amount * -1));
     return true;

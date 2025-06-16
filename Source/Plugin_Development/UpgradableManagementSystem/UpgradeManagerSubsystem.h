@@ -6,8 +6,9 @@
 #include "UpgradableComponent.h"
 #include "UpgradeDataProvider.h"
 #include "Subsystems/WorldSubsystem.h"
-#include "UpgradeManagerSubsystem.generated.h"
 #include "Logging/LogMacros.h"
+#include "UpgradeManagerSubsystem.generated.h"
+
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUpgradeSystem, Log, All);
 
@@ -119,6 +120,11 @@ public:
 	/** Retrieves the resource costs required for the next level upgrade */
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Resources")
 	void GetNextLevelUpgradeCosts(int32 ComponentId, TMap<FName, int32>& ResourceCosts) const;
+
+	/** Retrieves the resource costs required for the given levels upgrade */
+	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Resources")
+	TMap<FName, int32> GetUpgradeTotalResourceCost (int32 ComponentId, int32 LevelIncrease) const;
+	
 	// Not implemented yet. Use GetNextLevelUpgradeCosts
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Resources")
 	TMap<FName, int32> GetInProgressTotalResourceCost(int32 ComponentId) const;
@@ -170,7 +176,6 @@ protected:
 	// Maps each component ID to the data for their pending upgrade.
 	UPROPERTY()
 	TMap<int32, FUpgradeInProgressData> UpgradeInProgressData;
-
 	
 	/* Stack of free slots to be assigned to new components.
 	* Used to avoid re-allocating memory for new components when de-/registering.
@@ -178,18 +183,8 @@ protected:
 	UPROPERTY()
 	TArray<int32> FreeComponentIndices;
 
-	// UPROPERTY()
-	// FString UpgradeDataFolderPath;
-
-   // UPROPERTY()
-   // TArray<TObjectPtr<UUpgradeDataProvider>> DataProviders;
-
 	// Loaders
-	void LoadCatalog(TArray<UUpgradeDataProvider*> RequiredProviders);
-
-	// Resource functions
-	
-	TMap<FName, int32> GetUpgradeTotalResourceCost (int32 ComponentId, int32 LevelIncrease) const;
+	void LoadCatalog(TArray<UUpgradeDataProvider*> DataProviders);
 
 	// Upgrade Timer functions
 	float GetUpgradeTimerDuration(int32 ComponentId, int32 LevelIncrease) const;
@@ -200,8 +195,7 @@ protected:
 	
 	// Helpers
 	void CleanupFreeIndices();
-
-
+	
 	const TArray<FUpgradeDefinition>* GetUpgradeDefinitions(FName UpgradePathId) const;
 	const TArray<FUpgradeDefinition>* GetUpgradeDefinitions(int32 ComponentId) const;
 	const FUpgradeDefinition* GetUpgradeDefinitionForLevel(int32 ComponentId, int32 Level) const;

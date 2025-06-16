@@ -45,18 +45,19 @@ void UUpgradeManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	LoadCatalog(DataProviders);
 }
 
-void UUpgradeManagerSubsystem::LoadCatalog(TArray<UUpgradeDataProvider*> RequiredProviders)
+void UUpgradeManagerSubsystem::LoadCatalog(TArray<UUpgradeDataProvider*> DataProviders)
 {
-        if (RequiredProviders.Num() == 0)	return;
-	
-        UpgradeCatalog.Empty();
-        ResourceTypes.Empty();
+    if (DataProviders.Num() == 0)	return;
 
-        for (UUpgradeDataProvider* Provider : RequiredProviders)
-        {
-                if (!Provider) continue;
-                Provider->InitializeData(UpgradeCatalog, ResourceTypes);
-        }
+    UpgradeCatalog.Empty();
+    ResourceTypes.Empty();
+
+    for (UUpgradeDataProvider* Provider : DataProviders)
+    {
+        if (!Provider) continue;
+        Provider->InitializeData(UpgradeCatalog, ResourceTypes);
+    }
+	UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEMGR_INFO_03] Loaded Upgrade Catalog from %d provider(s)"), DataProviders.Num());
 }
 
 int32 UUpgradeManagerSubsystem::RegisterUpgradableComponent(UUpgradableComponent* Component)
@@ -71,11 +72,14 @@ int32 UUpgradeManagerSubsystem::RegisterUpgradableComponent(UUpgradableComponent
 	}
 	else
 	{
-		// No holes—grow the array
+		// No holes, grow the array
 		Id = RegisteredComponents.Add(Component);
 		ComponentLevels.Add(Component->InitialLevel);
 	}
-
+	if (UE_LOG_ACTIVE(LogUpgradeSystem, Verbose))
+	{
+		UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEMGR_INFO_04] Registered component ID %d at level %d. Total components %d"), Id, Component->InitialLevel, RegisteredComponents.Num()-FreeComponentIndices.Num());
+	}
 	return Id;
 }
 
@@ -99,6 +103,11 @@ void UUpgradeManagerSubsystem::UnregisterUpgradableComponent(const int32 Compone
 		RegisteredComponents[ComponentId].Reset();    // Clear the weak ptr
 		FreeComponentIndices.Add(ComponentId);                // Remember this slot as a hole
 		ComponentLevels[ComponentId] = -1;           // Mark as unused 
+	}
+
+	if (UE_LOG_ACTIVE(LogUpgradeSystem, Verbose))
+	{
+		UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEMGR_INFO_05] Unregistered component ID %d. Total components %d"), ComponentId, RegisteredComponents.Num()-FreeComponentIndices.Num());
 	}
 }
 
