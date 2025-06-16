@@ -24,7 +24,7 @@ A data‑driven upgrade framework that lets any actor gain leveling, ranking, or
 * **Flexible Data Providers**: drop JSON files, DataTables or DataAssets into a single folder. The subsystem scans once and instantiates the providers required for the detected data types.
 
 * **Dynamic Resource Interning**: at runtime, any `FName` resource type is interned into a shared array for minimal memory and fast lookups.
-* **Enum‑driven**: extend `EUpgradableAspect` to add your custom upgrade progression types (e.g. Level, Tier, Rank). Extend `EUpgradableCategopry` e.g. Unit, Building, Equipment.
+* **Enum‑driven**: extend `EUpgradableAspect` to add your custom upgrade progression types (e.g. Level, Tier, Rank). Extend `EUpgradableCategory` e.g. Unit, Building, Equipment.
 * **Blueprint & C++ API**: high‑level calls such as `RequestUpgradeForActor`, `GetUpgradeLevelForActor`, or batch queries by aspect or path.
 * **UMG Integration**: customizable progress bar and countdown widget driven by timelines.
 
