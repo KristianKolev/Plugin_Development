@@ -22,7 +22,7 @@ void UResourceSystemComponent::BeginPlay()
     // Only server side registration
     if (GetOwner() && GetOwner()->HasAuthority())
     {
-        if (UResourceManagerSubsystem* Sub = GetWorldSubsystem())
+        if (UResourceManagerSubsystem* Sub = GetResourceSubsystem())
         {
             Sub->RegisterComponent(this);
         }
@@ -33,7 +33,7 @@ void UResourceSystemComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     if (GetOwner() && GetOwner()->HasAuthority())
     {
-        if (UResourceManagerSubsystem* Sub = GetWorldSubsystem())
+        if (UResourceManagerSubsystem* Sub = GetResourceSubsystem())
         {
             Sub->UnregisterComponent(this);
         }
@@ -41,7 +41,7 @@ void UResourceSystemComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
     Super::EndPlay(EndPlayReason);
 }
 
-UResourceManagerSubsystem* UResourceSystemComponent::GetWorldSubsystem() const
+UResourceManagerSubsystem* UResourceSystemComponent::GetResourceSubsystem() const
 {
     return GetWorld() ? GetWorld()->GetSubsystem<UResourceManagerSubsystem>() : nullptr;
 }
@@ -50,7 +50,7 @@ void UResourceSystemComponent::AddResource(FName ResourceName, int32 Amount)
 {
     if (GetOwner() && GetOwner()->HasAuthority())
     {
-        GetWorldSubsystem()->AddResource(this, ResourceName, Amount);
+        GetResourceSubsystem()->AddResource(this, ResourceName, Amount);
     }
     else
     {
@@ -62,7 +62,7 @@ void UResourceSystemComponent::SpendResource(FName ResourceName, int32 Amount)
 {
     if (GetOwner() && GetOwner()->HasAuthority())
     {
-        GetWorldSubsystem()->SpendResource(this, ResourceName, Amount);
+        GetResourceSubsystem()->SpendResource(this, ResourceName, Amount);
     }
     else
     {
@@ -86,12 +86,12 @@ void UResourceSystemComponent::GetAllResources(TMap<FName, int32>& OutAvailableR
 
 void UResourceSystemComponent::Server_AddResource_Implementation(FName ResourceName, int32 Amount)
 {
-    GetWorldSubsystem()->AddResource(this, ResourceName, Amount);
+    GetResourceSubsystem()->AddResource(this, ResourceName, Amount);
 }
 
 void UResourceSystemComponent::Server_SpendResource_Implementation(FName ResourceName, int32 Amount)
 {
-    GetWorldSubsystem()->SpendResource(this, ResourceName, Amount);
+    GetResourceSubsystem()->SpendResource(this, ResourceName, Amount);
 }
 
 void UResourceSystemComponent::HandleResourceChanged_Implementation(FName ResourceName, int32 NewAmount, int32 AmountChange)

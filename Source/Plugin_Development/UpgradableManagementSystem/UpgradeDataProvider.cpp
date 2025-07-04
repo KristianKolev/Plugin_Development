@@ -33,12 +33,12 @@ TArray<UUpgradeDataProvider*> UUpgradeDataProvider::Scan(const FString& FolderPa
 
 void UUpgradeDataProvider::ScanForAssets(const FString& FolderPath, TArray<UUpgradeDataProvider*>& Providers)
 {
-	UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEDATA_INFO_03] Scanning assets in '%s'"), *FolderPath);
-	// Gather all assets in one pass
-    TArray<FAssetData> AssetsInFolder;
-    FAssetRegistryModule& RegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
-	RegistryModule.Get().GetAssetsByPath(FName(*FolderPath), AssetsInFolder, /*bRecursive=*/true);
-	UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEDATA_INFO_04] Found %d asset(s) in '%s'"), AssetsInFolder.Num(), *FolderPath);
+	// UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEDATA_INFO_03] Scanning assets in '%s'"), *FolderPath);
+	// // Gather all assets in one pass
+ //    TArray<FAssetData> AssetsInFolder;
+ //    FAssetRegistryModule& RegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+	// RegistryModule.Get().GetAssetsByPath(FName(*FolderPath), AssetsInFolder, /*bRecursive=*/true);
+	// UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEDATA_INFO_04] Found %d asset(s) in '%s'"), AssetsInFolder.Num(), *FolderPath);
 
     // Map asset class path to provider class for easy extension
     const TMap<FTopLevelAssetPath, TSubclassOf<UUpgradeDataProvider>> ClassToProvider = {
@@ -46,6 +46,7 @@ void UUpgradeDataProvider::ScanForAssets(const FString& FolderPath, TArray<UUpgr
         {UUpgradeDefinitionDataAsset::StaticClass()->GetClassPathName(), UUpgradeDataAssetProvider::StaticClass()}
     };
 
+	TArray<FAssetData> AssetsInFolder = UMightyraiderFunctionLibrary::GetAssetsInFolder(FolderPath);
     // Temporary storage of assets grouped by provider class
     TMap<TSubclassOf<UUpgradeDataProvider>, TArray<FAssetData>> ProviderAssets;
     for (const FAssetData& AssetData : AssetsInFolder)
@@ -69,8 +70,8 @@ void UUpgradeDataProvider::ScanForAssets(const FString& FolderPath, TArray<UUpgr
 
 void UUpgradeDataProvider::ScanForFiles(const FString& FolderPath, TArray<UUpgradeDataProvider*>& Providers)
 {
-	FString DiskPath = FPackageName::LongPackageNameToFilename(FolderPath);
-	UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEDATA_INFO_06] Scanning files in '%s'"), *DiskPath);
+	// FString DiskPath = FPackageName::LongPackageNameToFilename(FolderPath);
+	// UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEDATA_INFO_06] Scanning files in '%s'"), *DiskPath);
 
     // Map file extension to provider class for easy extension
     const TMap<FString, TSubclassOf<UUpgradeDataProvider>> ExtensionToProvider = {
@@ -84,11 +85,11 @@ void UUpgradeDataProvider::ScanForFiles(const FString& FolderPath, TArray<UUpgra
     {
         if (!Pair.Value) continue;
 
-        TArray<FString> FoundFiles;
-        const FString Wildcard = FString::Printf(TEXT("*.%s"), *Pair.Key);
-		IFileManager::Get().FindFilesRecursive(FoundFiles, *DiskPath, *Wildcard, true, false);
-		UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEDATA_INFO_07] Found %d '%s' file(s)"), FoundFiles.Num(), *Pair.Key);
-
+  //       TArray<FString> FoundFiles;
+  //       const FString Wildcard = FString::Printf(TEXT("*.%s"), *Pair.Key);
+		// IFileManager::Get().FindFilesRecursive(FoundFiles, *DiskPath, *Wildcard, true, false);
+		// UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEDATA_INFO_07] Found %d '%s' file(s)"), FoundFiles.Num(), *Pair.Key);
+    	TArray<FString> FoundFiles = UMightyraiderFunctionLibrary::GetFilesInFolder(FolderPath, *Pair.Key);
         if (FoundFiles.Num() > 0)
         {
             ProviderFiles.FindOrAdd(Pair.Value).Append(FoundFiles);

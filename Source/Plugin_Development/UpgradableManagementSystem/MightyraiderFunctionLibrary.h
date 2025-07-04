@@ -13,8 +13,14 @@ UCLASS()
 class PLUGIN_DEVELOPMENT_API UMightyraiderFunctionLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
-
+	
+public:
+	
 	/* Display the Project version number */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game Config")
 	static FString GetProjectVersion();
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Asset Access")
+	static TArray<FAssetData> GetAssetsInFolder (const FString& FolderPath);
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Asset Access")
+	static TArray<FString> GetFilesInFolder (const FString& FolderPath, const FString& FileExtension);
 };

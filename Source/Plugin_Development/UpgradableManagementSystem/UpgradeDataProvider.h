@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "AssetRegistry/AssetData.h"
 #include "UpgradeDataContainers.h"
+#include "MightyraiderFunctionLibrary.h"
 #include "UpgradeDataProvider.generated.h"
 
 UCLASS(Abstract)
