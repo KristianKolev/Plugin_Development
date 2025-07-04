@@ -26,7 +26,7 @@ void UUpgradeManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UUpgradeManagerSubsystem::Deinitialize()
 {
-        Super::Deinitialize();
+	Super::Deinitialize();
 }
 
 TArray<UUpgradeDataProvider*> UUpgradeManagerSubsystem::InitializeProviders()
@@ -54,8 +54,8 @@ void UUpgradeManagerSubsystem::LoadCatalog(TArray<UUpgradeDataProvider*> DataPro
 
     for (UUpgradeDataProvider* Provider : DataProviders)
     {
-        if (!Provider) continue;
-        Provider->InitializeData(UpgradeCatalog, ResourceTypes);
+	if (!Provider) continue;
+	Provider->InitializeData(UpgradeCatalog, ResourceTypes);
     }
 	UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEMGR_INFO_03] Loaded Upgrade Catalog from %d provider(s)"), DataProviders.Num());
 }
@@ -134,7 +134,7 @@ float UUpgradeManagerSubsystem::StartUpgradeTimer(int32 ComponentId, float Timer
 	
 	if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
 	{
-		Comp->OnUpgradeStarted.Broadcast(TimerDuration);
+		Comp->Client_OnUpgradeStarted(TimerDuration);
 	}
 	return TimerDuration;
 }
@@ -155,7 +155,7 @@ void UUpgradeManagerSubsystem::CancelUpgrade(int32 ComponentId)
 	{
 		StopUpgradeTimer(ComponentId);
 		UpgradeInProgressData.Remove(ComponentId);
-		Comp->OnUpgradeCanceled.Broadcast(GetCurrentLevel(ComponentId));
+		Comp->Client_OnUpgradeCanceled(GetCurrentLevel(ComponentId));
 	}
 }
 
@@ -182,7 +182,7 @@ float UUpgradeManagerSubsystem::UpdateUpgradeTimer(int32 ComponentId, float Delt
 		
 		if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
 		{
-			Comp->OnTimeToUpgradeChanged.Broadcast(DeltaTime);
+			Comp->Client_OnTimeToUpgradeChanged(DeltaTime);
 		}
 		if (NewTimeRemaining > 0.f)
 		{
@@ -254,7 +254,7 @@ UUpgradableComponent* UUpgradeManagerSubsystem::FindComponentOnActorByAspect(AAc
 }
 
 UUpgradableComponent* UUpgradeManagerSubsystem::FindComponentOnActorByCategory(AActor* TargetActor,
-                                                                               EUpgradableCategory Category) const
+									       EUpgradableCategory Category) const
 {
 	if (!TargetActor)
 		return nullptr;
@@ -521,36 +521,36 @@ bool UUpgradeManagerSubsystem::CanUpgrade(const int32 ComponentId, const int32 L
        // Iterate over all levels if trying to upgrade several levels at once
        for (int32 i = GetNextLevel(ComponentId); i <= GetCurrentLevel(ComponentId) + LevelIncrease; ++i)
        {
-           LevelData = &(*UpgradeDefinitions)[i];
-           if (LevelData->bUpgradeLocked)
-           {
-               UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_04] Level %d locked for component %d"), i, ComponentId);
-               return false;
-           }
-           FName ResourceType ;
-           // Add up the required resource cost for each resource for this level
-           for (int32 j = 0; j < LevelData->ResourceTypeIndices.Num(); ++j)
-           {
-               ResourceType = GetResourceTypeName(LevelData->ResourceTypeIndices[j]);
-               // no resource of the required type was provided
-               if (!AvailableResources.Contains(ResourceType))
-               {
-                   UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_05] Missing resource '%s' for component %d"), *ResourceType.ToString(), ComponentId);
-                   return false;
-               }
-               TotalResourceCosts.FindOrAdd(ResourceType) += LevelData->UpgradeCosts[j];
-           }
+	   LevelData = &(*UpgradeDefinitions)[i];
+	   if (LevelData->bUpgradeLocked)
+	   {
+	       UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_04] Level %d locked for component %d"), i, ComponentId);
+	       return false;
+	   }
+	   FName ResourceType ;
+	   // Add up the required resource cost for each resource for this level
+	   for (int32 j = 0; j < LevelData->ResourceTypeIndices.Num(); ++j)
+	   {
+	       ResourceType = GetResourceTypeName(LevelData->ResourceTypeIndices[j]);
+	       // no resource of the required type was provided
+	       if (!AvailableResources.Contains(ResourceType))
+	       {
+		   UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_05] Missing resource '%s' for component %d"), *ResourceType.ToString(), ComponentId);
+		   return false;
+	       }
+	       TotalResourceCosts.FindOrAdd(ResourceType) += LevelData->UpgradeCosts[j];
+	   }
        }
        TArray<FName> RequiredResources;
        TotalResourceCosts.GetKeys(RequiredResources);
        for (FName ResourceType : RequiredResources)
        {
-           // not enough resources of the required type
-           if (TotalResourceCosts[ResourceType] > AvailableResources.FindRef(ResourceType))
-           {
-               UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_06] Insufficient '%s' for component %d"), *ResourceType.ToString(), ComponentId);
-               return false;
-           }
+	   // not enough resources of the required type
+	   if (TotalResourceCosts[ResourceType] > AvailableResources.FindRef(ResourceType))
+	   {
+	       UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_06] Insufficient '%s' for component %d"), *ResourceType.ToString(), ComponentId);
+	       return false;
+	   }
        }
 
        Success = true;
