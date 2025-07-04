@@ -58,6 +58,6 @@ private:
 	TMap<FName, int32> LocalResources;
 	
 	/** Cached pointer to the WorldSubsystem */
-	UResourceManagerSubsystem* GetWorldSubsystem() const;
+	UResourceManagerSubsystem* GetResourceSubsystem() const;
 
 };
