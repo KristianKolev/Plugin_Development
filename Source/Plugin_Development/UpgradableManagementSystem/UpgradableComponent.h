@@ -71,11 +71,23 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category="Upgradable Component|Visuals")
 	void ChangeActorVisualsPerUpgradeLevel (int32 Level, UStaticMeshComponent* StaticMeshComponent,
-	                                        USkeletalMeshComponent* SkeletalComponent);
+						USkeletalMeshComponent* SkeletalComponent);
 	
 	UFUNCTION(Client, Reliable)
 	void Client_SetLevel(int32 NewLevel);
 	void Client_SetLevel_Implementation(int32 NewLevel);
+
+	UFUNCTION(Client, Reliable)
+	void Client_OnUpgradeStarted(float SecondsUntilCompleted);
+	void Client_OnUpgradeStarted_Implementation(float SecondsUntilCompleted);
+
+	UFUNCTION(Client, Reliable)
+	void Client_OnUpgradeCanceled(int32 CurrentLevel);
+	void Client_OnUpgradeCanceled_Implementation(int32 CurrentLevel);
+
+	UFUNCTION(Client, Reliable)
+	void Client_OnTimeToUpgradeChanged(float DeltaTime);
+	void Client_OnTimeToUpgradeChanged_Implementation(float DeltaTime);
 
 protected:
 
@@ -109,5 +121,8 @@ protected:
 	void Server_RequestUpgrade(int32 LevelIncrease, const TArray<FName>& AvailableResourcesNames, const TArray<int32>& AvailableResourceAmounts);
 	void Server_RequestUpgrade_Implementation(int32 LevelIncrease, const TArray<FName>& AvailableResourcesNames, const TArray<int32>& AvailableResourceAmounts);
 	bool Server_RequestUpgrade_Validate(int32 LevelIncrease, const TArray<FName>& AvailableResourcesNames, const TArray<int32>& AvailableResourceAmounts);
-	
+
+private:
+    UUpgradeManagerSubsystem* GetUpgradeSubsystem() const;
+
 };

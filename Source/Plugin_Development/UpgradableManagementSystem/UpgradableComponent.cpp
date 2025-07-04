@@ -12,23 +12,20 @@ void UUpgradableComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-//	if (GetOwnerRole() == ROLE_Authority)
-//	{
-		// Register this component with the subsystem
-		UUpgradeManagerSubsystem* Subsystem = GetWorld()->GetSubsystem<UUpgradeManagerSubsystem>();
-		if (Subsystem)
+	if (GetOwner() && GetOwner()->HasAuthority())
+	{
+		if (UUpgradeManagerSubsystem* Subsystem = GetUpgradeSubsystem())
 		{
 			UpgradableID = Subsystem->RegisterUpgradableComponent(this);
 		}
-//	}
+	}
 }
 
 void UUpgradableComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (/*GetOwnerRole() == ROLE_Authority && */UpgradableID != -1)
+	if (GetOwner() && GetOwner()->HasAuthority() && UpgradableID != -1)
 	{
-		UUpgradeManagerSubsystem* Subsystem = GetWorld()->GetSubsystem<UUpgradeManagerSubsystem>();
-		if (Subsystem)
+		if (UUpgradeManagerSubsystem* Subsystem = GetUpgradeSubsystem())
 		{
 			Subsystem->UnregisterUpgradableComponent(UpgradableID);
 		}
@@ -55,7 +52,7 @@ void UUpgradableComponent::RequestUpgrade(int32 LevelIncrease, const TArray<FNam
 }
 
 void UUpgradableComponent::ChangeActorVisualsPerUpgradeLevel(int32 Level, UStaticMeshComponent* StaticMeshComponent,
-                                                             USkeletalMeshComponent* SkeletalComponent)
+							     USkeletalMeshComponent* SkeletalComponent)
 {
 	if (StaticMeshComponent && LevelUpVisuals->StaticMeshPerLevel.Contains(Level))
 	{
@@ -105,13 +102,33 @@ bool UUpgradableComponent::Server_RequestUpgrade_Validate(int32 LevelIncrease, c
 
 void UUpgradableComponent::Server_RequestUpgrade_Implementation(int32 LevelIncrease, const TArray<FName>& AvailableResourcesNames, const TArray<int32>& AvailableResourceAmounts)
 {
-	if (UUpgradeManagerSubsystem* Subsystem = GetWorld()->GetSubsystem<UUpgradeManagerSubsystem>())
+	if (UUpgradeManagerSubsystem* Subsystem = GetUpgradeSubsystem())
 	{
 		TMap<FName, int32> AvailableResources;
 		for ( int32 i = 0; i < AvailableResourcesNames.Num(); ++i)
-		{			
+		{
 			AvailableResources.Add(AvailableResourcesNames[i], AvailableResourceAmounts[i]);
 		}
 		Subsystem->HandleUpgradeRequest(UpgradableID, LevelIncrease, AvailableResources);
 	}
+}
+
+void UUpgradableComponent::Client_OnUpgradeStarted_Implementation(float SecondsUntilCompleted)
+{
+	OnUpgradeStarted.Broadcast(SecondsUntilCompleted);
+}
+
+void UUpgradableComponent::Client_OnUpgradeCanceled_Implementation(int32 CurrentLevel)
+{
+	OnUpgradeCanceled.Broadcast(CurrentLevel);
+}
+
+void UUpgradableComponent::Client_OnTimeToUpgradeChanged_Implementation(float DeltaTime)
+{
+	OnTimeToUpgradeChanged.Broadcast(DeltaTime);
+}
+
+UUpgradeManagerSubsystem* UUpgradableComponent::GetUpgradeSubsystem() const
+{
+	return GetWorld() ? GetWorld()->GetSubsystem<UUpgradeManagerSubsystem>() : nullptr;
 }
