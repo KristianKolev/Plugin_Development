@@ -31,6 +31,9 @@ struct PLUGIN_DEVELOPMENT_API FUpgradeDefinitionAsset : public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 UpgradeLevel = 0;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TMap<FName, int32> UpgradeResourceCosts;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -98,6 +101,7 @@ UENUM(BlueprintType)
 enum class ECostScalingMode : uint8
 {
 	HardCoded,
+	Constant,
 	Linear,
 	Exponential,
 	Polynomial,
@@ -105,34 +109,55 @@ enum class ECostScalingMode : uint8
 };
 
 USTRUCT(BlueprintType)
-struct FUpgradePathSettings
+struct FRequirementsScalingSegment
 {
 	GENERATED_BODY()
 
-	/** Which scaling to apply for this path */
+	/** Inclusive start level */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 StartLevel = 0;
+
+	/** Exclusive end level */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 EndLevel = 0;
+
+	/** Scaling mode */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	ECostScalingMode ScalingMode = ECostScalingMode::HardCoded;
 
-	/** Parameters for each mode (only one group is used) */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Linear", meta=(EditCondition="ScalingMode==ECostScalingMode::Linear"))
-	float LinearBase = 100.f;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Linear", meta=(EditCondition="ScalingMode==ECostScalingMode::Linear"))
-	float LinearSlope = 50.f;
+	/** Only for Constant mode: exact cost every level in [Start,End) */
+	UPROPERTY(EditAnywhere, meta=(EditCondition="ScalingMode==ECostScalingMode::Constant"))
+	int32 ConstantCost = 0;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Exponential", meta=(EditCondition="ScalingMode==ECostScalingMode::Exponential"))
-	float ExpBase = 100.f;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Exponential", meta=(EditCondition="ScalingMode==ECostScalingMode::Exponential"))
+	/** Linear parameters (Cost = Prev + Slope) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(EditCondition="ScalingMode==ECostScalingMode::Linear"))
+	float LinearSlope = 10.f;
+
+	/** Exponential parameters (Cost = Prev × Rate) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(EditCondition="ScalingMode==ECostScalingMode::Exponential"))
 	float ExpRate = 1.2f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Polynomial", meta=(EditCondition="ScalingMode==ECostScalingMode::Polynomial"))
-	float PolyCoeff = 10.f;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Polynomial", meta=(EditCondition="ScalingMode==ECostScalingMode::Polynomial"))
+	/** Polynomial parameters (Cost = Coeff × Level^Power + Offset) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(EditCondition="ScalingMode==ECostScalingMode::Polynomial"))
+	float PolyCoeff = 5.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(EditCondition="ScalingMode==ECostScalingMode::Polynomial"))
 	float PolyPower = 2.f;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Polynomial", meta=(EditCondition="ScalingMode==ECostScalingMode::Polynomial"))
-	float PolyOffset = 50.f;
-
-	/** Blueprint hook for fully custom formulas per‐path */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Custom", meta=(EditCondition="ScalingMode==ECostScalingMode::Custom"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(EditCondition="ScalingMode==ECostScalingMode::Polynomial"))
+	float PolyOffset = 0.f;
+	
+	/** Blueprint hook for custom formulas */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(EditCondition="ScalingMode==ECostScalingMode::Custom"))
 	FName CustomFunctionName;
 };
 
+USTRUCT(BlueprintType)
+struct FCostsScalingSegment : public FRequirementsScalingSegment
+{
+	GENERATED_BODY()
+};
+
+USTRUCT(BlueprintType)
+struct FTimeScalingSegment : public FRequirementsScalingSegment
+{
+	GENERATED_BODY()
+};
