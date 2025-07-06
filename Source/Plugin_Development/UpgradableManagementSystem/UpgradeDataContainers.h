@@ -93,3 +93,46 @@ struct PLUGIN_DEVELOPMENT_API FUpgradeInProgressData
 	UPROPERTY()
 	int32 RequestedLevelIncrease = 1;
 };
+
+UENUM(BlueprintType)
+enum class ECostScalingMode : uint8
+{
+	HardCoded,
+	Linear,
+	Exponential,
+	Polynomial,
+	Custom
+};
+
+USTRUCT(BlueprintType)
+struct FUpgradePathSettings
+{
+	GENERATED_BODY()
+
+	/** Which scaling to apply for this path */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	ECostScalingMode ScalingMode = ECostScalingMode::HardCoded;
+
+	/** Parameters for each mode (only one group is used) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Linear", meta=(EditCondition="ScalingMode==ECostScalingMode::Linear"))
+	float LinearBase = 100.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Linear", meta=(EditCondition="ScalingMode==ECostScalingMode::Linear"))
+	float LinearSlope = 50.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Exponential", meta=(EditCondition="ScalingMode==ECostScalingMode::Exponential"))
+	float ExpBase = 100.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Exponential", meta=(EditCondition="ScalingMode==ECostScalingMode::Exponential"))
+	float ExpRate = 1.2f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Polynomial", meta=(EditCondition="ScalingMode==ECostScalingMode::Polynomial"))
+	float PolyCoeff = 10.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Polynomial", meta=(EditCondition="ScalingMode==ECostScalingMode::Polynomial"))
+	float PolyPower = 2.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Polynomial", meta=(EditCondition="ScalingMode==ECostScalingMode::Polynomial"))
+	float PolyOffset = 50.f;
+
+	/** Blueprint hook for fully custom formulas per‐path */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Custom", meta=(EditCondition="ScalingMode==ECostScalingMode::Custom"))
+	FName CustomFunctionName;
+};
+
