@@ -14,7 +14,7 @@ void UUpgradableComponent::BeginPlay()
 
 	if (GetOwner() && GetOwner()->HasAuthority())
 	{
-		if (UUpgradeManagerSubsystem* Subsystem = GetUpgradeSubsystem())
+		if (UUpgradeManagerSubsystem* Subsystem = GetWorld()->GetSubsystem<UUpgradeManagerSubsystem>())
 		{
 			UpgradableID = Subsystem->RegisterUpgradableComponent(this);
 		}
@@ -25,7 +25,7 @@ void UUpgradableComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (GetOwner() && GetOwner()->HasAuthority() && UpgradableID != -1)
 	{
-		if (UUpgradeManagerSubsystem* Subsystem = GetUpgradeSubsystem())
+		if (UUpgradeManagerSubsystem* Subsystem = GetWorld()->GetSubsystem<UUpgradeManagerSubsystem>())
 		{
 			Subsystem->UnregisterUpgradableComponent(UpgradableID);
 		}
@@ -102,7 +102,7 @@ bool UUpgradableComponent::Server_RequestUpgrade_Validate(int32 LevelIncrease, c
 
 void UUpgradableComponent::Server_RequestUpgrade_Implementation(int32 LevelIncrease, const TArray<FName>& AvailableResourcesNames, const TArray<int32>& AvailableResourceAmounts)
 {
-	if (UUpgradeManagerSubsystem* Subsystem = GetUpgradeSubsystem())
+	if (UUpgradeManagerSubsystem* Subsystem = GetWorld()->GetSubsystem<UUpgradeManagerSubsystem>())
 	{
 		TMap<FName, int32> AvailableResources;
 		for ( int32 i = 0; i < AvailableResourcesNames.Num(); ++i)
@@ -126,9 +126,4 @@ void UUpgradableComponent::Client_OnUpgradeCanceled_Implementation(int32 Current
 void UUpgradableComponent::Client_OnTimeToUpgradeChanged_Implementation(float DeltaTime)
 {
 	OnTimeToUpgradeChanged.Broadcast(DeltaTime);
-}
-
-UUpgradeManagerSubsystem* UUpgradableComponent::GetUpgradeSubsystem() const
-{
-	return GetWorld() ? GetWorld()->GetSubsystem<UUpgradeManagerSubsystem>() : nullptr;
 }

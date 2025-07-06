@@ -123,6 +123,5 @@ protected:
 	bool Server_RequestUpgrade_Validate(int32 LevelIncrease, const TArray<FName>& AvailableResourcesNames, const TArray<int32>& AvailableResourceAmounts);
 
 private:
-    UUpgradeManagerSubsystem* GetUpgradeSubsystem() const;
 
 };
