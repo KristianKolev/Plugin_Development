@@ -46,4 +46,9 @@ protected:
     
     // Helper function to add a resource type to the resource type array if it doesn't already exist.
     virtual int32 AddOrFindRequiredResourceTypeIndex(const FName& ResourceType, TArray<FName>& ResourceTypes);
+
+    virtual const FRequirementsScalingSegment* FindSegment(const TArray<FRequirementsScalingSegment>& Segments, int32 Level) const;
+
+    virtual int32 ComputeRequirementsBySegment(const FRequirementsScalingSegment* Segment, int32 PreviousCost, int32 Level) const;
+    
 };

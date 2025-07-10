@@ -166,6 +166,7 @@ protected:
 	TArray<TWeakObjectPtr<UUpgradableComponent>> RegisteredComponents;
 	
 	// Stores the current level of each component ID.
+	// TODO make this into a struct of component data. Cache them locally in the manager when the component registers itself. To be used for quick lookup instead of looping over all components in query functions.
 	UPROPERTY()
 	TArray<int32> ComponentLevels;		
 

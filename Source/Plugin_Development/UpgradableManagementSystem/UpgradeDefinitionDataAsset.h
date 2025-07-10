@@ -27,5 +27,5 @@ public:
 	
 	// Each element in this array represents a level of the upgrade path
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Upgrade System")
-	TArray<FUpgradeDefinitionAsset> Levels;
+	TArray<FUpgradeDefinitionAsset> LevelOverrides;
 };

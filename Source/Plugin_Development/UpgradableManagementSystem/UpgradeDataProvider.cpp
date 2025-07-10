@@ -119,3 +119,46 @@ int32 UUpgradeDataProvider::AddOrFindRequiredResourceTypeIndex(const FName& Reso
 
 	return NewIndex;
 }
+
+const FRequirementsScalingSegment* UUpgradeDataProvider::FindSegment(
+	const TArray<FRequirementsScalingSegment>& Segments, int32 Level) const
+{
+	for (const auto& Segment : Segments)
+	{
+		if (Level >= Segment.StartLevel && Level < Segment.EndLevel)
+			return &Segment;
+	}
+	return nullptr;
+}
+
+int32 UUpgradeDataProvider::ComputeRequirementsBySegment(const FRequirementsScalingSegment* Segment, int32 PreviousCost,
+	int32 Level) const
+{
+	if (!Segment) return 0;
+
+	switch (Segment->ScalingMode)
+	{
+	case ECostScalingMode::Constant:
+		return Segment->ConstantCost;
+		
+	case ECostScalingMode::Linear:
+		return FMath::RoundToInt(PreviousCost + Segment->LinearSlope);
+
+	case ECostScalingMode::Exponential:
+		{
+			return FMath::RoundToInt(PreviousCost * Segment->ExpRate);
+		}
+
+	case ECostScalingMode::Polynomial:
+		{	//TODO double check if this formula is correct
+			return FMath::RoundToInt(PreviousCost * Segment->PolyCoeff + Segment->PolyOffset);
+		}
+
+	// case ECostScalingMode::Custom:
+	// 	return FMath::RoundToInt(CallBlueprintFunction(PathId, Level, Segment->CustomFunctionName, /*Resource*/FName()));
+
+	default:
+		return 0;
+	}
+}
+
