@@ -17,4 +17,6 @@ class PLUGIN_DEVELOPMENT_API UMergeManagerSubsystem : public UUpgradeSubsystemBa
 public:
 	bool CanMerge(int32 ComponentId);
 	bool HandleMergeRequest(int32 ComponentId);
+
+	// Change for testing push to branch from rider
 };
