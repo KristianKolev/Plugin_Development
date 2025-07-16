@@ -6,10 +6,14 @@
 
 UCLASS()
 class PLUGIN_DEVELOPMENT_API UUpgradeJsonProvider : public UUpgradeDataProvider
-{
-        GENERATED_BODY()
-public:
-       UUpgradeJsonProvider();
-       virtual void InitializeData(TMap<FName, TArray<FUpgradeDefinition>>& OutCatalog,
-                                   TArray<FName>& OutResourceTypes) override;
+	{
+	GENERATED_BODY()
+
+	public:
+	UUpgradeJsonProvider();
+	virtual void InitializeData(TMap<FName, TArray<FUpgradeDefinition>>& OutCatalog,
+	TArray<FName>& OutResourceTypes) override;
+	
+	private:
+	bool ParseScalingSegment(const TSharedPtr<FJsonObject>& JsonObject, FRequirementsScalingSegment& OutSegment) const;
 };
