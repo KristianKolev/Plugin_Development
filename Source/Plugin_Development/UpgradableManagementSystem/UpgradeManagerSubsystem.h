@@ -7,7 +7,7 @@
 #include "UpgradeDataProvider.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "Logging/LogMacros.h"
-#include "UpgrageSubsystemBase.h"
+#include "UpgradeSubsystemBase.h"
 #include "UpgradeManagerSubsystem.generated.h"
 
 
@@ -15,7 +15,7 @@ class UUpgradableComponent;
 class UUpgradeJsonProvider;
 
 UCLASS()
-class PLUGIN_DEVELOPMENT_API UUpgradeManagerSubsystem : public UUpgrageSubsystemBase
+class PLUGIN_DEVELOPMENT_API UUpgradeManagerSubsystem : public UUpgradeSubsystemBase
 {
 	GENERATED_BODY()
 	

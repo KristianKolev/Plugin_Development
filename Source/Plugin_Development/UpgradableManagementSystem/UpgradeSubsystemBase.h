@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "UpgradeDataContainers.h"
 #include "Subsystems/WorldSubsystem.h"
-#include "UpgrageSubsystemBase.generated.h"
+#include "UpgradeSubsystemBase.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUpgradeSystem, Log, All);
 
@@ -14,11 +14,11 @@ class UUpgradableComponent;
  * 
  */
 UCLASS()
-class PLUGIN_DEVELOPMENT_API UUpgrageSubsystemBase : public UWorldSubsystem
+class PLUGIN_DEVELOPMENT_API UUpgradeSubsystemBase : public UWorldSubsystem
 {
 	GENERATED_BODY()
 public:
-	UUpgrageSubsystemBase();
+	UUpgradeSubsystemBase();
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;

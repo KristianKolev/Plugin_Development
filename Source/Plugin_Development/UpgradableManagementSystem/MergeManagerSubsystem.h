@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UpgrageSubsystemBase.h"
+#include "UpgradeSubsystemBase.h"
 #include "MergeManagerSubsystem.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class PLUGIN_DEVELOPMENT_API UMergeManagerSubsystem : public UUpgrageSubsystemBase
+class PLUGIN_DEVELOPMENT_API UMergeManagerSubsystem : public UUpgradeSubsystemBase
 {
 	GENERATED_BODY()
 

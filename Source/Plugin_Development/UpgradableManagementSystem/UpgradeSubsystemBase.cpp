@@ -1,31 +1,31 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "UpgrageSubsystemBase.h"
+#include "UpgradeSubsystemBase.h"
 #include "UpgradableComponent.h"
 
 DEFINE_LOG_CATEGORY(LogUpgradeSystem);
 
-UUpgrageSubsystemBase::UUpgrageSubsystemBase()
+UUpgradeSubsystemBase::UUpgradeSubsystemBase()
 {
 }
 
-void UUpgrageSubsystemBase::Initialize(FSubsystemCollectionBase& Collection)
+void UUpgradeSubsystemBase::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 }
 
-void UUpgrageSubsystemBase::Deinitialize()
+void UUpgradeSubsystemBase::Deinitialize()
 {
 	Super::Deinitialize();
 }
 
-void UUpgrageSubsystemBase::OnWorldBeginPlay(UWorld& InWorld)
+void UUpgradeSubsystemBase::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
 }
 
-int32 UUpgrageSubsystemBase::RegisterUpgradableComponent(UUpgradableComponent* Component)
+int32 UUpgradeSubsystemBase::RegisterUpgradableComponent(UUpgradableComponent* Component)
 {
 	int32 Id;
 	if (FreeComponentIndices.Num() > 0)
@@ -48,7 +48,7 @@ int32 UUpgrageSubsystemBase::RegisterUpgradableComponent(UUpgradableComponent* C
 	return Id;
 }
 
-void UUpgrageSubsystemBase::UnregisterUpgradableComponent(int32 ComponentId)
+void UUpgradeSubsystemBase::UnregisterUpgradableComponent(int32 ComponentId)
 {
 	if (RegisteredComponents.IsValidIndex(ComponentId))
 	{
@@ -67,7 +67,7 @@ void UUpgrageSubsystemBase::UnregisterUpgradableComponent(int32 ComponentId)
 	}
 }
 
-void UUpgrageSubsystemBase::UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel)
+void UUpgradeSubsystemBase::UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel)
 {
 	if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
 	{
@@ -76,14 +76,14 @@ void UUpgrageSubsystemBase::UpdateUpgradeLevel(const int32 ComponentId, const in
 	}
 }
 
-UUpgradableComponent* UUpgrageSubsystemBase::GetComponentById(int32 Id) const
+UUpgradableComponent* UUpgradeSubsystemBase::GetComponentById(int32 Id) const
 {
 	return (RegisteredComponents.IsValidIndex(Id)
 		? RegisteredComponents[Id].Get()
 		: nullptr);
 }
 
-UUpgradableComponent* UUpgrageSubsystemBase::FindComponentOnActorByAspect(AActor* TargetActor,
+UUpgradableComponent* UUpgradeSubsystemBase::FindComponentOnActorByAspect(AActor* TargetActor,
 	EUpgradableAspect Aspect) const
 {
 	if (!TargetActor)
@@ -101,7 +101,7 @@ UUpgradableComponent* UUpgrageSubsystemBase::FindComponentOnActorByAspect(AActor
 	return nullptr;
 }
 
-UUpgradableComponent* UUpgrageSubsystemBase::FindComponentOnActorByCategory(AActor* TargetActor,
+UUpgradableComponent* UUpgradeSubsystemBase::FindComponentOnActorByCategory(AActor* TargetActor,
 	EUpgradableCategory Category) const
 {
 	if (!TargetActor)
@@ -119,7 +119,7 @@ UUpgradableComponent* UUpgrageSubsystemBase::FindComponentOnActorByCategory(AAct
 	return nullptr;
 }
 
-TArray<UUpgradableComponent*> UUpgrageSubsystemBase::GetComponentsByAspect(EUpgradableAspect Aspect,
+TArray<UUpgradableComponent*> UUpgradeSubsystemBase::GetComponentsByAspect(EUpgradableAspect Aspect,
 	int32 LevelFilter) const
 {
 	TArray<UUpgradableComponent*> Result;
@@ -149,7 +149,7 @@ TArray<UUpgradableComponent*> UUpgrageSubsystemBase::GetComponentsByAspect(EUpgr
 	return Result;
 }
 
-TArray<UUpgradableComponent*> UUpgrageSubsystemBase::GetComponentsByUpgradePath(FName PathId, int32 LevelFilter) const
+TArray<UUpgradableComponent*> UUpgradeSubsystemBase::GetComponentsByUpgradePath(FName PathId, int32 LevelFilter) const
 {
 	TArray<UUpgradableComponent*> Result;
 
@@ -178,7 +178,7 @@ TArray<UUpgradableComponent*> UUpgrageSubsystemBase::GetComponentsByUpgradePath(
 	return Result;
 }
 
-TArray<FUpgradeDefinition> UUpgrageSubsystemBase::GetUpgradeDefinitionsForPath(FName PathId) const
+TArray<FUpgradeDefinition> UUpgradeSubsystemBase::GetUpgradeDefinitionsForPath(FName PathId) const
 {
 	TArray<FUpgradeDefinition> Result;
 	const TArray<FUpgradeDefinition>* UpgradeDefinitions = GetUpgradeDefinitions(PathId);
@@ -189,7 +189,7 @@ TArray<FUpgradeDefinition> UUpgrageSubsystemBase::GetUpgradeDefinitionsForPath(F
 	return Result;
 }
 
-int32 UUpgrageSubsystemBase::GetCurrentLevel(const int32 ComponentId) const
+int32 UUpgradeSubsystemBase::GetCurrentLevel(const int32 ComponentId) const
 {
 	if (ComponentLevels.IsValidIndex(ComponentId) && ComponentLevels[ComponentId] != -1)
 	{
@@ -198,7 +198,7 @@ int32 UUpgrageSubsystemBase::GetCurrentLevel(const int32 ComponentId) const
 	return -1;
 }
 
-int32 UUpgrageSubsystemBase::GetUpgradeLevelForActor(AActor* TargetActor, EUpgradableAspect Aspect) const
+int32 UUpgradeSubsystemBase::GetUpgradeLevelForActor(AActor* TargetActor, EUpgradableAspect Aspect) const
 {
 	if (!TargetActor) return -1;
 
@@ -207,7 +207,7 @@ int32 UUpgrageSubsystemBase::GetUpgradeLevelForActor(AActor* TargetActor, EUpgra
 	return GetCurrentLevel(Comp->GetComponentId());
 }
 
-int32 UUpgrageSubsystemBase::GetNextLevel(const int32 ComponentId) const
+int32 UUpgradeSubsystemBase::GetNextLevel(const int32 ComponentId) const
 {
 	if (ComponentLevels.IsValidIndex(ComponentId) && ComponentLevels[ComponentId] != -1)
 	{
@@ -217,12 +217,12 @@ int32 UUpgrageSubsystemBase::GetNextLevel(const int32 ComponentId) const
 	return -1;
 }
 
-int32 UUpgrageSubsystemBase::GetMaxLevel(int32 ComponentId) const
+int32 UUpgradeSubsystemBase::GetMaxLevel(int32 ComponentId) const
 {
 	return GetUpgradeDefinitions(ComponentId)->Num()-1;
 }
 
-int32 UUpgrageSubsystemBase::GetInProgressLevelIncrease(int32 ComponentId) const
+int32 UUpgradeSubsystemBase::GetInProgressLevelIncrease(int32 ComponentId) const
 {
 	if ( UpgradeInProgressData.Contains(ComponentId))
 	{
@@ -231,7 +231,7 @@ int32 UUpgrageSubsystemBase::GetInProgressLevelIncrease(int32 ComponentId) const
 	return -1;
 }
 
-void UUpgrageSubsystemBase::CancelUpgrade(int32 ComponentId)
+void UUpgradeSubsystemBase::CancelUpgrade(int32 ComponentId)
 {
 	UUpgradableComponent* Comp = GetComponentById(ComponentId);
 	if (Comp && IsUpgradeTimerActive(ComponentId))
@@ -242,7 +242,7 @@ void UUpgrageSubsystemBase::CancelUpgrade(int32 ComponentId)
 	}
 }
 
-int32 UUpgrageSubsystemBase::GetNextLevelUpgradeTime(const int32 ComponentId) const
+int32 UUpgradeSubsystemBase::GetNextLevelUpgradeTime(const int32 ComponentId) const
 {
 	int32 SecondsForUpgrade = -1;
 	if (const FUpgradeDefinition* UpgradeDefinition = GetUpgradeDefinitionForLevel(ComponentId, GetNextLevel(ComponentId)))
@@ -252,7 +252,7 @@ int32 UUpgrageSubsystemBase::GetNextLevelUpgradeTime(const int32 ComponentId) co
 	return SecondsForUpgrade;
 }
 
-float UUpgrageSubsystemBase::UpdateUpgradeTimer(int32 ComponentId, float DeltaTime)
+float UUpgradeSubsystemBase::UpdateUpgradeTimer(int32 ComponentId, float DeltaTime)
 {
 	if (UpgradeInProgressData.Find(ComponentId))
 	{
@@ -281,7 +281,7 @@ float UUpgrageSubsystemBase::UpdateUpgradeTimer(int32 ComponentId, float DeltaTi
 	return -1.f;
 }
 
-float UUpgrageSubsystemBase::GetUpgradeTimeRemaining(int32 ComponentId) const
+float UUpgradeSubsystemBase::GetUpgradeTimeRemaining(int32 ComponentId) const
 {
 	if (UpgradeInProgressData.Find(ComponentId))
 	{
@@ -291,7 +291,7 @@ float UUpgrageSubsystemBase::GetUpgradeTimeRemaining(int32 ComponentId) const
 	return -1.f;
 }
 
-float UUpgrageSubsystemBase::GetInProgressTotalUpgradeTime(int32 ComponentId) const
+float UUpgradeSubsystemBase::GetInProgressTotalUpgradeTime(int32 ComponentId) const
 {
 	if (UpgradeInProgressData.Contains(ComponentId))
 	{
@@ -300,7 +300,7 @@ float UUpgrageSubsystemBase::GetInProgressTotalUpgradeTime(int32 ComponentId) co
 	return -1.f;
 }
 
-int32 UUpgrageSubsystemBase::GetResourceTypeIndex(const FName& TypeName) const
+int32 UUpgradeSubsystemBase::GetResourceTypeIndex(const FName& TypeName) const
 {
 	int32 FoundIndex = ResourceTypes.IndexOfByKey(TypeName);
 	if (FoundIndex != INDEX_NONE)
@@ -310,14 +310,14 @@ int32 UUpgrageSubsystemBase::GetResourceTypeIndex(const FName& TypeName) const
 	return -1;
 }
 
-FName UUpgrageSubsystemBase::GetResourceTypeName(int32 Index) const
+FName UUpgradeSubsystemBase::GetResourceTypeName(int32 Index) const
 {
 	return ResourceTypes.IsValidIndex(Index)
 		? ResourceTypes[Index]
 		: NAME_None;
 }
 
-void UUpgrageSubsystemBase::GetNextLevelUpgradeCosts(int32 ComponentId, TMap<FName, int32>& ResourceCosts) const
+void UUpgradeSubsystemBase::GetNextLevelUpgradeCosts(int32 ComponentId, TMap<FName, int32>& ResourceCosts) const
 {
 	if (const FUpgradeDefinition* UpgradeDefinition = GetUpgradeDefinitionForLevel(ComponentId, GetNextLevel(ComponentId)))
 	{
@@ -328,7 +328,7 @@ void UUpgrageSubsystemBase::GetNextLevelUpgradeCosts(int32 ComponentId, TMap<FNa
 	}
 }
 
-TMap<FName, int32> UUpgrageSubsystemBase::GetUpgradeTotalResourceCost(int32 ComponentId, int32 LevelIncrease) const
+TMap<FName, int32> UUpgradeSubsystemBase::GetUpgradeTotalResourceCost(int32 ComponentId, int32 LevelIncrease) const
 {
 	TMap<FName, int32> TotalResourceCosts;
 
@@ -350,7 +350,7 @@ TMap<FName, int32> UUpgrageSubsystemBase::GetUpgradeTotalResourceCost(int32 Comp
 	return TotalResourceCosts;
 }
 
-TMap<FName, int32> UUpgrageSubsystemBase::GetInProgressTotalResourceCost(int32 ComponentId) const
+TMap<FName, int32> UUpgradeSubsystemBase::GetInProgressTotalResourceCost(int32 ComponentId) const
 {
 	if (UpgradeInProgressData.Contains(ComponentId))
 	{
@@ -359,7 +359,7 @@ TMap<FName, int32> UUpgrageSubsystemBase::GetInProgressTotalResourceCost(int32 C
 	return TMap<FName, int32>();
 }
 
-float UUpgrageSubsystemBase::GetUpgradeTimerDuration(int32 ComponentId, int32 LevelIncrease) const
+float UUpgradeSubsystemBase::GetUpgradeTimerDuration(int32 ComponentId, int32 LevelIncrease) const
 {
 	float UpgradeTime = 0.0f;
 	for ( int32 i = 0; i < LevelIncrease; ++i )
@@ -373,7 +373,7 @@ float UUpgrageSubsystemBase::GetUpgradeTimerDuration(int32 ComponentId, int32 Le
 	return UpgradeTime;
 }
 
-float UUpgrageSubsystemBase::StartUpgradeTimer(int32 ComponentId, float TimerDuration)
+float UUpgradeSubsystemBase::StartUpgradeTimer(int32 ComponentId, float TimerDuration)
 {
 	FTimerDelegate TimerDelegate;
 	TimerDelegate.BindUFunction(this, FName("OnUpgradeTimerFinished"), ComponentId);
@@ -387,7 +387,7 @@ float UUpgrageSubsystemBase::StartUpgradeTimer(int32 ComponentId, float TimerDur
 	return TimerDuration;
 }
 
-void UUpgrageSubsystemBase::StopUpgradeTimer(int32 ComponentId)
+void UUpgradeSubsystemBase::StopUpgradeTimer(int32 ComponentId)
 {
 	if (UpgradeInProgressData.Find(ComponentId))
 	{
@@ -396,7 +396,7 @@ void UUpgrageSubsystemBase::StopUpgradeTimer(int32 ComponentId)
 	}
 }
 
-void UUpgrageSubsystemBase::OnUpgradeTimerFinished(int32 ComponentId)
+void UUpgradeSubsystemBase::OnUpgradeTimerFinished(int32 ComponentId)
 {
 	StopUpgradeTimer(ComponentId);
 
@@ -408,19 +408,19 @@ void UUpgrageSubsystemBase::OnUpgradeTimerFinished(int32 ComponentId)
 	UpdateUpgradeLevel(ComponentId, NewLevel);
 }
 
-const TArray<FUpgradeDefinition>* UUpgrageSubsystemBase::GetUpgradeDefinitions(FName UpgradePathId) const
+const TArray<FUpgradeDefinition>* UUpgradeSubsystemBase::GetUpgradeDefinitions(FName UpgradePathId) const
 {
 	return UpgradeCatalog.Find(UpgradePathId);
 }
 
-const TArray<FUpgradeDefinition>* UUpgrageSubsystemBase::GetUpgradeDefinitions(int32 ComponentId) const
+const TArray<FUpgradeDefinition>* UUpgradeSubsystemBase::GetUpgradeDefinitions(int32 ComponentId) const
 {
 	const UUpgradableComponent* Comp = GetComponentById(ComponentId);
 	if (!Comp) return nullptr;
 	return UpgradeCatalog.Find(Comp->UpgradePathId);
 }
 
-const FUpgradeDefinition* UUpgrageSubsystemBase::GetUpgradeDefinitionForLevel(int32 ComponentId, int32 Level) const
+const FUpgradeDefinition* UUpgradeSubsystemBase::GetUpgradeDefinitionForLevel(int32 ComponentId, int32 Level) const
 {
 	const TArray<FUpgradeDefinition>* UpgradeDefinitions = GetUpgradeDefinitions(ComponentId);
 	if (!UpgradeDefinitions || Level < 0 || Level > UpgradeDefinitions->Num()-1 ) return nullptr;
