@@ -13,4 +13,8 @@ UCLASS()
 class PLUGIN_DEVELOPMENT_API UMergeManagerSubsystem : public UUpgrageSubsystemBase
 {
 	GENERATED_BODY()
+
+public:
+	bool CanMerge(int32 ComponentId);
+	bool HandleMergeRequest(int32 ComponentId);
 };
