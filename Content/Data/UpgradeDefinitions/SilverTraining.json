@@ -1,0 +1,71 @@
+{
+	"UpgradePathId": "SilverTraining",
+	"MaxLevel": 20,
+	"CostScalingSegments": {
+		"Silver": {
+			"ScalingSegments": [
+				{
+					"StartLevel": 0,
+					"EndLevel": 20,
+					"ScalingMode": "Polynomial",
+					"PolyCoeff": 2,
+					"PolyPower": 2,
+					"PolyOffset": 50
+				}
+			]
+		},
+		"Gold": {
+			"ScalingSegments": [
+				{
+					"StartLevel": 0,
+					"EndLevel": 20,
+					"ScalingMode": "Linear",
+					"LinearSlope": 150
+				}
+			]
+		}
+	},
+	"TimeScalingSegments": [
+		{
+			"StartLevel": 0,
+			"EndLevel": 10,
+			"ScalingMode": "Constant",
+			"ConstantCost": 10
+		},
+		{
+			"StartLevel": 11,
+			"EndLevel": 20,
+			"ScalingMode": "Exponential",
+			"ExpRate": 1.5
+		}
+	],
+	"LevelOverrides": [
+		{
+			"UpgradeLevel": 0,
+			"UpgradeResourceCosts": {
+				"Silver": 20,
+				"Gold": 100
+			},
+			"UpgradeSeconds": 0,
+			"bUpgradeLocked": false
+		},
+		{
+			"UpgradeLevel": 7,
+			"UpgradeResourceCosts": {
+				"Silver": 150,
+				"Gold": 400
+			},
+			"UpgradeSeconds": 25,
+			"bUpgradeLocked": false
+		},
+		{
+			"UpgradeLevel": 14,
+			"UpgradeResourceCosts": {
+				"Silver": 300,
+				"Gold": 900
+			},
+			"UpgradeSeconds": 45,
+			"bUpgradeLocked": false
+		}
+	]
+}

@@ -1,0 +1,75 @@
+{
+	"UpgradePathId": "BronzeTraining",
+	"MaxLevel": 15,
+	"CostScalingSegments": {
+		"Bronze": {
+			"ScalingSegments": [
+				{
+					"StartLevel": 0,
+					"EndLevel": 10,
+					"ScalingMode": "Linear",
+					"LinearSlope": 20
+				},
+				{
+					"StartLevel": 11,
+					"EndLevel": 15,
+					"ScalingMode": "Constant",
+					"ConstantCost": 200
+				}
+			]
+		},
+		"Wood": {
+			"ScalingSegments": [
+				{
+					"StartLevel": 0,
+					"EndLevel": 15,
+					"ScalingMode": "Exponential",
+					"ExpRate": 1.1
+				}
+			]
+		}
+	},
+	"TimeScalingSegments": [
+		{
+			"StartLevel": 0,
+			"EndLevel": 5,
+			"ScalingMode": "Constant",
+			"ConstantCost": 5
+		},
+		{
+			"StartLevel": 6,
+			"EndLevel": 15,
+			"ScalingMode": "Linear",
+			"LinearSlope": 1
+		}
+	],
+	"LevelOverrides": [
+		{
+			"UpgradeLevel": 0,
+			"UpgradeResourceCosts": {
+				"Bronze": 10,
+				"Wood": 5
+			},
+			"UpgradeSeconds": 0,
+			"bUpgradeLocked": false
+		},
+		{
+			"UpgradeLevel": 5,
+			"UpgradeResourceCosts": {
+				"Bronze": 60,
+				"Wood": 25
+			},
+			"UpgradeSeconds": 8,
+			"bUpgradeLocked": false
+		},
+		{
+			"UpgradeLevel": 10,
+			"UpgradeResourceCosts": {
+				"Bronze": 120,
+				"Wood": 50
+			},
+			"UpgradeSeconds": 15,
+			"bUpgradeLocked": false
+		}
+	]
+}

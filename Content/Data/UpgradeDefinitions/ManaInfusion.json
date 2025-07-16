@@ -1,0 +1,88 @@
+{
+	"UpgradePathId": "ManaInfusion",
+	"MaxLevel": 30,
+	"CostScalingSegments": {
+		"Mana": {
+			"ScalingSegments": [
+				{
+					"StartLevel": 0,
+					"EndLevel": 30,
+					"ScalingMode": "Polynomial",
+					"PolyCoeff": 5,
+					"PolyPower": 2,
+					"PolyOffset": 0
+				}
+			]
+		},
+		"Gold": {
+			"ScalingSegments": [
+				{
+					"StartLevel": 0,
+					"EndLevel": 30,
+					"ScalingMode": "Exponential",
+					"ExpRate": 1.25
+				}
+			]
+		},
+		"Crystal": {
+			"ScalingSegments": [
+				{
+					"StartLevel": 10,
+					"EndLevel": 30,
+					"ScalingMode": "Linear",
+					"LinearSlope": 40
+				}
+			]
+		}
+	},
+	"TimeScalingSegments": [
+		{
+			"StartLevel": 0,
+			"EndLevel": 30,
+			"ScalingMode": "Constant",
+			"ConstantCost": 15
+		}
+	],
+	"LevelOverrides": [
+		{
+			"UpgradeLevel": 0,
+			"UpgradeResourceCosts": {
+				"Mana": 30,
+				"Gold": 100,
+				"Crystal": 0
+			},
+			"UpgradeSeconds": 0,
+			"bUpgradeLocked": false
+		},
+		{
+			"UpgradeLevel": 8,
+			"UpgradeResourceCosts": {
+				"Mana": 300,
+				"Gold": 400,
+				"Crystal": 80
+			},
+			"UpgradeSeconds": 40,
+			"bUpgradeLocked": false
+		},
+		{
+			"UpgradeLevel": 16,
+			"UpgradeResourceCosts": {
+				"Mana": 700,
+				"Gold": 800,
+				"Crystal": 240
+			},
+			"UpgradeSeconds": 80,
+			"bUpgradeLocked": false
+		},
+		{
+			"UpgradeLevel": 24,
+			"UpgradeResourceCosts": {
+				"Mana": 1200,
+				"Gold": 1500,
+				"Crystal": 500
+			},
+			"UpgradeSeconds": 140,
+			"bUpgradeLocked": true
+		}
+	]
+}
