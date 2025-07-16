@@ -158,17 +158,7 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
 					}
 
 					FRequirementsScalingSegment Segment;
-					Segment.StartLevel = (*SegObj)->GetIntegerField(TEXT("StartLevel"));
-					Segment.EndLevel = (*SegObj)->GetIntegerField(TEXT("EndLevel"));
-					FString ModeStr = (*SegObj)->GetStringField(TEXT("ScalingMode"));
-					UEnum *EnumPtr = StaticEnum<ECostScalingMode>();
-					Segment.ScalingMode = EnumPtr ? static_cast<ECostScalingMode>(EnumPtr->GetValueByNameString(ModeStr)) : ECostScalingMode::HardCoded;
-					(*SegObj)->TryGetNumberField(TEXT("ConstantCost"), Segment.ConstantCost);
-					(*SegObj)->TryGetNumberField(TEXT("LinearSlope"), Segment.LinearSlope);
-					(*SegObj)->TryGetNumberField(TEXT("ExpRate"), Segment.ExpRate);
-					(*SegObj)->TryGetNumberField(TEXT("PolyCoeff"), Segment.PolyCoeff);
-					(*SegObj)->TryGetNumberField(TEXT("PolyPower"), Segment.PolyPower);
-					(*SegObj)->TryGetNumberField(TEXT("PolyOffset"), Segment.PolyOffset);
+					ParseScalingSegment(*SegObj, Segment);
 
 					if ((PreviousSegmentEnd + 1) != Segment.StartLevel)
 					{
@@ -233,17 +223,7 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
 				}
 
 				FRequirementsScalingSegment Segment;
-				Segment.StartLevel = (*SegObj)->GetIntegerField(TEXT("StartLevel"));
-				Segment.EndLevel = (*SegObj)->GetIntegerField(TEXT("EndLevel"));
-				FString ModeStr = (*SegObj)->GetStringField(TEXT("ScalingMode"));
-				UEnum *EnumPtr = StaticEnum<ECostScalingMode>();
-				Segment.ScalingMode = EnumPtr ? static_cast<ECostScalingMode>(EnumPtr->GetValueByNameString(ModeStr)) : ECostScalingMode::HardCoded;
-				(*SegObj)->TryGetNumberField(TEXT("ConstantCost"), Segment.ConstantCost);
-				(*SegObj)->TryGetNumberField(TEXT("LinearSlope"), Segment.LinearSlope);
-				(*SegObj)->TryGetNumberField(TEXT("ExpRate"), Segment.ExpRate);
-				(*SegObj)->TryGetNumberField(TEXT("PolyCoeff"), Segment.PolyCoeff);
-				(*SegObj)->TryGetNumberField(TEXT("PolyPower"), Segment.PolyPower);
-				(*SegObj)->TryGetNumberField(TEXT("PolyOffset"), Segment.PolyOffset);
+				ParseScalingSegment(*SegObj, Segment);
 
 				if (PreviousSegmentEnd != Segment.StartLevel)
 				{
@@ -300,5 +280,51 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
 		return;
 	}
 
-	UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEJSON_INFO_04] Loaded %d JSON files (found %d PathIds)"), LoadedFiles, OutCatalog.Num());
+UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEJSON_INFO_04] Loaded %d JSON files (found %d PathIds)"), LoadedFiles, OutCatalog.Num());
+}
+
+bool UUpgradeJsonProvider::ParseScalingSegment(const TSharedPtr<FJsonObject>& JsonObject, FRequirementsScalingSegment& OutSegment) const
+{
+	if (!JsonObject.IsValid())
+	{
+		return false;
+	}
+
+	OutSegment.StartLevel = JsonObject->GetIntegerField(TEXT("StartLevel"));
+	OutSegment.EndLevel = JsonObject->GetIntegerField(TEXT("EndLevel"));
+
+	FString ModeStr = JsonObject->GetStringField(TEXT("ScalingMode"));
+	UEnum* EnumPtr = StaticEnum<ECostScalingMode>();
+	OutSegment.ScalingMode = EnumPtr ? static_cast<ECostScalingMode>(EnumPtr->GetValueByNameString(ModeStr)) : ECostScalingMode::HardCoded;
+
+	switch (OutSegment.ScalingMode)
+	{
+	case ECostScalingMode::Constant:
+		JsonObject->TryGetNumberField(TEXT("ConstantCost"), OutSegment.ConstantCost);
+		break;
+	case ECostScalingMode::Linear:
+		JsonObject->TryGetNumberField(TEXT("LinearSlope"), OutSegment.LinearSlope);
+		break;
+	case ECostScalingMode::Exponential:
+		JsonObject->TryGetNumberField(TEXT("ExpRate"), OutSegment.ExpRate);
+		break;
+	case ECostScalingMode::Polynomial:
+		JsonObject->TryGetNumberField(TEXT("PolyCoeff"), OutSegment.PolyCoeff);
+		JsonObject->TryGetNumberField(TEXT("PolyPower"), OutSegment.PolyPower);
+		JsonObject->TryGetNumberField(TEXT("PolyOffset"), OutSegment.PolyOffset);
+		break;
+	case ECostScalingMode::Custom:
+		{
+			FString CustomName;
+			if (JsonObject->TryGetStringField(TEXT("CustomFunctionName"), CustomName))
+			{
+				OutSegment.CustomFunctionName = FName(*CustomName);
+			}
+		}
+		break;
+	default:
+		break;
+	}
+
+	return true;
 }
