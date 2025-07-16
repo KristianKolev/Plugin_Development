@@ -5,6 +5,7 @@
 #include "Modules/ModuleManager.h"
 #include "Misc/Paths.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "../CustomLogging.h"
 #include "UpgradeManagerSubsystem.h"
 
 UUpgradeDataTableProvider::UUpgradeDataTableProvider()

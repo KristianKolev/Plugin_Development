@@ -10,6 +10,7 @@
 #include "Misc/Paths.h"
 #include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
+#include "../CustomLogging.h"
 #include "HAL/FileManager.h"
 
 TArray<UUpgradeDataProvider*> UUpgradeDataProvider::Scan(const FString& FolderPath)

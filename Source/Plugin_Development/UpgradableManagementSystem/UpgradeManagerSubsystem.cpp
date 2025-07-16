@@ -11,6 +11,7 @@
 #include "TimerManager.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "../CustomLogging.h"
 #include "Windows/WindowsApplication.h"
 
 DEFINE_LOG_CATEGORY(LogUpgradeSystem);
