@@ -34,11 +34,13 @@ struct PLUGIN_DEVELOPMENT_API FUpgradeDefinitionAsset : public FTableRowBase
 	int32 UpgradeLevel = 0;
 
 	//Leave a resource value as -1 to ignore its override and set it through the selected scaling method
-	// Value of 0 will make the cost 0 for that level, but the level after that will scale as if the 0 cost level had a normal cost
-	// Value higher than 0 will cause the next level cost calculation to base itself on this custom >0 value
+	//Value of 0 will make the cost 0 for that level, but the level after that will scale as if the 0 cost level had a normal cost
+	//Value higher than 0 will cause the next level cost calculation to base itself on this custom >0 value
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TMap<FName, int32> UpgradeResourceCosts = {{FName(), -1}};
 	//Leave value as -1 to ignore its override and set it through the selected scaling method
+	//Value of 0 will make the cost 0 for that level, but the level after that will scale as if the 0 cost level had a normal cost
+	//Value higher than 0 will cause the next level cost calculation to base itself on this custom >0 value
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 UpgradeSeconds = -1;
 
@@ -120,7 +122,7 @@ struct FRequirementsScalingSegment
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 StartLevel = 0;
 
-	/** Exclusive end level. On the last segment should match the Max Level */
+	/** Inclusive end level. On the last segment should match the Max Level */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 EndLevel = 0;
 

@@ -4,6 +4,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Modules/ModuleManager.h"
 #include "Misc/Paths.h"
+#include "../CustomLogging.h"
 #include "UpgradeManagerSubsystem.h"
 
 
@@ -74,12 +75,12 @@ void UUpgradeDataAssetProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
         // Process values from level overrides into the catalog
         for (auto& LevelOverride : Asset->LevelOverrides)
         {
-	if (LevelOverride.UpgradeLevel > MaxLevel)
-	{
-		UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEASSET_ERR_09] Invalid level range for level override in asset '%s'. Level override starts at level %d, but max level is %d"),
-		*PathId.ToString(), LevelOverride.UpgradeLevel, MaxLevel);
-		continue;
-	}
+	        if (LevelOverride.UpgradeLevel > MaxLevel)
+	        {
+		        UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEASSET_ERR_09] Invalid level range for level override in asset '%s'. Level override starts at level %d, but max level is %d"),
+		        *PathId.ToString(), LevelOverride.UpgradeLevel, MaxLevel);
+		        continue;
+	        }
             FUpgradeDefinition LevelData;
             for (auto& ResourcePair : LevelOverride.UpgradeResourceCosts)
             {
@@ -114,30 +115,30 @@ void UUpgradeDataAssetProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
         for (auto& SegmentPair : Asset->CostScalingSegments)
         {
             FName ResourceName = SegmentPair.Key;
-	if (!PreviousResourceCost.Contains(ResourceName))
-	{
-		UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEASSET_ERR_08] Invalid resource '%s' in asset '%s'. Previous resource cost not found. Each resource for an upgrade path should be first define in a level override."),
-		*ResourceName.ToString(), *PathId.ToString());
-		continue;
-	}
+	        if (!PreviousResourceCost.Contains(ResourceName))
+	        {
+		        UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEASSET_ERR_08] Invalid resource '%s' in asset '%s'. Previous resource cost not found. Each resource for an upgrade path should be first define in a level override."),
+		        *ResourceName.ToString(), *PathId.ToString());
+		        continue;
+	        }
             int32 PreviousSegmentEnd = 0;
             int32 ResourceIndex = AddOrFindRequiredResourceTypeIndex(ResourceName, OutResourceTypes);
             
             // Iterate over each segment within a resource
             for (auto& ResourceSegment : SegmentPair.Value.ScalingSegments)
             {
-		if (PreviousSegmentEnd != ResourceSegment.StartLevel)
-			{
-				UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEASSET_ERR_04] Invalid segment range for resource '%s' in asset '%s'. Segment starts at level %d, but previous segment ended at level %d. There should be no gaps."),
-				*ResourceName.ToString(), *PathId.ToString(), ResourceSegment.StartLevel, PreviousSegmentEnd);
-				break;
-		}
-		if (ResourceSegment.EndLevel > MaxLevel)
-				{
-			UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEASSET_ERR_05] Invalid level range for resource '%s' in asset '%s'. Segment ends at level %d, but max level is %d"),
-				*ResourceName.ToString(), *PathId.ToString(), ResourceSegment.EndLevel, MaxLevel);
-			break;
-		}
+		        if ((PreviousSegmentEnd + 1) != ResourceSegment.StartLevel)
+		        {
+				        UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEASSET_ERR_04] Invalid segment range for resource '%s' in asset '%s'. Segment starts at level %d, but previous segment ended at level %d. There should be no gaps."),
+				        *ResourceName.ToString(), *PathId.ToString(), ResourceSegment.StartLevel, PreviousSegmentEnd);
+				        break;
+		        }
+		        if (ResourceSegment.EndLevel > MaxLevel)
+		        {
+			        UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEASSET_ERR_05] Invalid level range for resource '%s' in asset '%s'. Segment ends at level %d, but max level is %d"),
+				        *ResourceName.ToString(), *PathId.ToString(), ResourceSegment.EndLevel, MaxLevel);
+			        break;
+		        }
 
                 PreviousSegmentEnd = ResourceSegment.EndLevel;
                 // Iterate over the level ranges within a segment
@@ -151,7 +152,6 @@ void UUpgradeDataAssetProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
                         LevelDataArray[i].ResourceTypeIndices.Add(ResourceIndex);
                         LevelDataArray[i].UpgradeCosts.Add(ResourceCost);
                         PreviousResourceCost.FindChecked(ResourceName) = ResourceCost;
-                        
                     }
                     // The array element has been generated and has a cost associated with it - probably through the level overrides.
                     else
@@ -190,18 +190,18 @@ void UUpgradeDataAssetProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
             int32 PreviousSegmentEnd = 0;
             for (auto& TimeSegments : Asset->TimeScalingSegments)
             {
-		if (PreviousSegmentEnd != TimeSegments.StartLevel)
-			{
-				UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEASSET_ERR_11] Invalid segment range for time cost in asset '%s'. Segment starts at level %d, but previous segment ended at level %d. There should be no gaps."),
-				*PathId.ToString(), TimeSegments.StartLevel, PreviousSegmentEnd);
-				break;
-		}
-		if (TimeSegments.EndLevel > MaxLevel)
-				{
-			UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEASSET_ERR_10] Invalid level range for time costs in asset '%s'. Segment ends at level %d, but max level is %d"),
-				*PathId.ToString(), TimeSegments.EndLevel, MaxLevel);
-			break;
-		}
+		        if (PreviousSegmentEnd != TimeSegments.StartLevel)
+		        {
+				        UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEASSET_ERR_11] Invalid segment range for time cost in asset '%s'. Segment starts at level %d, but previous segment ended at level %d. There should be no gaps."),
+				        *PathId.ToString(), TimeSegments.StartLevel, PreviousSegmentEnd);
+				        break;
+		        }
+		        if (TimeSegments.EndLevel > MaxLevel)
+		        {
+			        UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEASSET_ERR_10] Invalid level range for time costs in asset '%s'. Segment ends at level %d, but max level is %d"),
+				        *PathId.ToString(), TimeSegments.EndLevel, MaxLevel);
+			        break;
+		        }
                 PreviousSegmentEnd = TimeSegments.EndLevel;
             
                 for ( int i = TimeSegments.StartLevel; i <= TimeSegments.EndLevel; ++i )

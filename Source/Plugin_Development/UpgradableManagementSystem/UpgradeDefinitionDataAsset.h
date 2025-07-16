@@ -34,7 +34,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Upgrade System")
 	TArray<FRequirementsScalingSegment> TimeScalingSegments;
 	
-	// Override costs and bools for desired upgrade levels. UpgradeLevel variable shouldn't be higher than MaxLevel
+	/* Override costs and bools for desired upgrade levels. UpgradeLevel variable shouldn't be higher than MaxLevel
+	 * Should always define a level 0, which can be used as a cost to build or cost to unlock the upgrade path
+	 * Then level 1 is the first upgrade. If an upgrade path starts unlocked, then level 0 doesn't need to be used, but still needs to be defined.
+	 * Each new, previously unencountered resource requirement should be first introduced through a level override.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Upgrade System")
 	TArray<FUpgradeDefinitionAsset> LevelOverrides;
 };
