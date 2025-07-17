@@ -32,43 +32,48 @@ void UUpgradeSubsystemBase::OnWorldBeginPlay(UWorld& InWorld)
 
 int32 UUpgradeSubsystemBase::RegisterUpgradableComponent(UUpgradableComponent* Component)
 {
-	int32 Id;
-	if (FreeComponentIndices.Num() > 0)
-	{
-		// Reuse the last hole
+		int32 Id;
+		FUpgradableComponentData Entry;
+		Entry.Component = Component;
+		Entry.Owner = Component ? Component->GetOwner() : nullptr;
+		Entry.UpgradePathId = Component ? Component->UpgradePathId : NAME_None;
+		Entry.Aspect = Component ? Component->GetUpgradableAspect() : EUpgradableAspect::None;
+		Entry.Category = Component ? Component->GetUpgradableCategory() : EUpgradableCategory::None;
+		Entry.Level = Component ? Component->InitialLevel : -1;
+		
+		if (FreeComponentIndices.Num() > 0)
+		{
 		Id = FreeComponentIndices.Pop(/*bAllowShrinking=*/false);
-		RegisteredComponents[Id] = Component;
-		ComponentLevels[Id] = Component->InitialLevel;
-	}
-	else
-	{
-		// No holes, grow the array
-		Id = RegisteredComponents.Add(Component);
-		ComponentLevels.Add(Component->InitialLevel);
-	}
-	if (UE_LOG_ACTIVE(LogUpgradeSystem, Verbose))
-	{
-		UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEMGR_INFO_04] Registered component ID %d at level %d. Total components %d"), Id, Component->InitialLevel, RegisteredComponents.Num()-FreeComponentIndices.Num());
-	}
-	return Id;
-}
+		ComponentData[Id] = Entry;
+		}
+		else
+		{
+		Id = ComponentData.Add(Entry);
+		}
+		
+		if (UE_LOG_ACTIVE(LogUpgradeSystem, Verbose))
+		{
+		UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEMGR_INFO_04] Registered component ID %d at level %d. Total components %d"), Id, Entry.Level, ComponentData.Num() - FreeComponentIndices.Num());
+		}
+		
+		return Id;
+		}
 
 void UUpgradeSubsystemBase::UnregisterUpgradableComponent(int32 ComponentId)
-{
-	if (RegisteredComponents.IsValidIndex(ComponentId))
 	{
-		if (IsUpgradeTimerActive(ComponentId))
-		{
-			CancelUpgrade(ComponentId);
-		}
-		RegisteredComponents[ComponentId].Reset();    // Clear the weak ptr
-		FreeComponentIndices.Add(ComponentId);                // Remember this slot as a hole
-		ComponentLevels[ComponentId] = -1;           // Mark as unused 
+	if (ComponentData.IsValidIndex(ComponentId))
+	{
+	if (IsUpgradeTimerActive(ComponentId))
+	{
+	CancelUpgrade(ComponentId);
 	}
-
+	ComponentData[ComponentId] = FUpgradableComponentData();
+	FreeComponentIndices.Add(ComponentId);
+	}
+	
 	if (UE_LOG_ACTIVE(LogUpgradeSystem, Verbose))
 	{
-		UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEMGR_INFO_05] Unregistered component ID %d. Total components %d"), ComponentId, RegisteredComponents.Num()-FreeComponentIndices.Num());
+	UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEMGR_INFO_05] Unregistered component ID %d. Total components %d"), ComponentId, ComponentData.Num() - FreeComponentIndices.Num());
 	}
 }
 
@@ -182,11 +187,14 @@ TArray<UUpgradeDataProvider*> UUpgradeSubsystemBase::InitializeProviders()
 
 void UUpgradeSubsystemBase::UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel)
 {
-	if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
-	{
-		ComponentLevels[ComponentId] = NewLevel;
-		Comp->Client_SetLevel(NewLevel);
-	}
+if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
+{
+if (ComponentData.IsValidIndex(ComponentId))
+{
+ComponentData[ComponentId].Level = NewLevel;
+}
+Comp->Client_SetLevel(NewLevel);
+}
 }
 
 bool UUpgradeSubsystemBase::RequestUpgradeForActor(AActor* TargetActor, EUpgradableAspect Aspect, int32 LevelIncrease,
@@ -205,124 +213,108 @@ bool UUpgradeSubsystemBase::RequestUpgradeForActor(AActor* TargetActor, EUpgrada
 
 UUpgradableComponent* UUpgradeSubsystemBase::GetComponentById(int32 Id) const
 {
-	return (RegisteredComponents.IsValidIndex(Id)
-		? RegisteredComponents[Id].Get()
-		: nullptr);
+return (ComponentData.IsValidIndex(Id) && ComponentData[Id].Component.IsValid())
+? ComponentData[Id].Component.Get()
+: nullptr;
 }
 
 UUpgradableComponent* UUpgradeSubsystemBase::FindComponentOnActorByAspect(AActor* TargetActor,
-	EUpgradableAspect Aspect) const
-{
-	if (!TargetActor)
-		return nullptr;
-
-	TArray<UUpgradableComponent*> Comps;
-	TargetActor->GetComponents<UUpgradableComponent>(Comps);
-	for (UUpgradableComponent* Comp : Comps)
+EUpgradableAspect Aspect) const
 	{
-		if (Comp && Comp->GetUpgradableAspect() == Aspect)
-		{
-			return Comp;
-		}
-	}
+	if (!TargetActor)
 	return nullptr;
-}
+	
+	for (const FUpgradableComponentData& Entry : ComponentData)
+	{
+	if (!Entry.Component.IsValid())
+	continue;
+	if (Entry.Owner.Get() != TargetActor)
+	continue;
+	if (Entry.Aspect != Aspect)
+	continue;
+	return Entry.Component.Get();
+	}
+	
+	return nullptr;
+	}
 
 UUpgradableComponent* UUpgradeSubsystemBase::FindComponentOnActorByCategory(AActor* TargetActor,
 	EUpgradableCategory Category) const
-{
-	if (!TargetActor)
-		return nullptr;
-
-	TArray<UUpgradableComponent*> Comps;
-	TargetActor->GetComponents<UUpgradableComponent>(Comps);
-	for (UUpgradableComponent* Comp : Comps)
 	{
-		if (Comp && Comp->GetUpgradableCategory() == Category)
-		{
-			return Comp;
-		}
+	if (!TargetActor)
+	return nullptr;
+	
+	for (const FUpgradableComponentData& Entry : ComponentData)
+	{
+	if (!Entry.Component.IsValid())
+	continue;
+	if (Entry.Owner.Get() != TargetActor)
+	continue;
+	if (Entry.Category != Category)
+	continue;
+	return Entry.Component.Get();
 	}
+	
 	return nullptr;
 }
 
-TArray<UUpgradableComponent*> UUpgradeSubsystemBase::GetComponentsByAspect(EUpgradableAspect Aspect,
+	TArray<UUpgradableComponent*> UUpgradeSubsystemBase::GetComponentsByAspect(EUpgradableAspect Aspect,
 	int32 LevelFilter) const
-{
+	{
 	TArray<UUpgradableComponent*> Result;
-
-	for (int32 Id = 0; Id < RegisteredComponents.Num(); ++Id)
+	
+	for (int32 Id = 0; Id < ComponentData.Num(); ++Id)
 	{
-		if (!RegisteredComponents[Id].IsValid())
-			continue;
-
-		UUpgradableComponent* Comp = RegisteredComponents[Id].Get();
-		if (!Comp)
-			continue;
-
-		if (Comp->GetUpgradableAspect() != Aspect)
-			continue;
-
-		// If a level filter is specified, ensure it matches
-		if (LevelFilter >= 0)
-		{
-			if (!ComponentLevels.IsValidIndex(Id) || ComponentLevels[Id] != LevelFilter)
-				continue;
-		}
-
-		Result.Add(Comp);
+	const FUpgradableComponentData& Entry = ComponentData[Id];
+	if (!Entry.Component.IsValid())
+	continue;
+	if (Entry.Aspect != Aspect)
+	continue;
+	if (LevelFilter >= 0 && Entry.Level != LevelFilter)
+	continue;
+	Result.Add(Entry.Component.Get());
+	}
+	
+	return Result;
 	}
 
-	return Result;
-}
-
-TArray<UUpgradableComponent*> UUpgradeSubsystemBase::GetComponentsByUpgradePath(FName PathId, int32 LevelFilter) const
-{
+	TArray<UUpgradableComponent*> UUpgradeSubsystemBase::GetComponentsByUpgradePath(FName PathId, int32 LevelFilter) const
+	{
 	TArray<UUpgradableComponent*> Result;
-
-	for (int32 Id = 0; Id < RegisteredComponents.Num(); ++Id)
+	
+	for (int32 Id = 0; Id < ComponentData.Num(); ++Id)
 	{
-		if (!RegisteredComponents[Id].IsValid())
-			continue;
-
-		UUpgradableComponent* Comp = RegisteredComponents[Id].Get();
-		if (!Comp)
-			continue;
-
-		if (Comp->UpgradePathId != PathId)
-			continue;
-
-		// If a level filter is specified, ensure it matches
-		if (LevelFilter >= 0)
+	const FUpgradableComponentData& Entry = ComponentData[Id];
+	if (!Entry.Component.IsValid())
+	continue;
+	if (Entry.UpgradePathId != PathId)
+	continue;
+	if (LevelFilter >= 0 && Entry.Level != LevelFilter)
+	continue;
+	Result.Add(Entry.Component.Get());
+	}
+	
+	return Result;
+	}
+	
+	TArray<FUpgradeDefinition> UUpgradeSubsystemBase::GetUpgradeDefinitionsForPath(FName PathId) const
+	{
+		TArray<FUpgradeDefinition> Result;
+		const TArray<FUpgradeDefinition>* UpgradeDefinitions = GetUpgradeDefinitions(PathId);
+		if (UpgradeDefinitions)
 		{
-			if (!ComponentLevels.IsValidIndex(Id) || ComponentLevels[Id] != LevelFilter)
-				continue;
+			Result = *UpgradeDefinitions;
 		}
-
-		Result.Add(Comp);
+		return Result;
 	}
-
-	return Result;
-}
-
-TArray<FUpgradeDefinition> UUpgradeSubsystemBase::GetUpgradeDefinitionsForPath(FName PathId) const
-{
-	TArray<FUpgradeDefinition> Result;
-	const TArray<FUpgradeDefinition>* UpgradeDefinitions = GetUpgradeDefinitions(PathId);
-	if (UpgradeDefinitions)
-	{
-		Result = *UpgradeDefinitions;
-	}
-	return Result;
-}
 
 int32 UUpgradeSubsystemBase::GetCurrentLevel(const int32 ComponentId) const
 {
-	if (ComponentLevels.IsValidIndex(ComponentId) && ComponentLevels[ComponentId] != -1)
-	{
-		return ComponentLevels[ComponentId];
-	}
-	return -1;
+if (ComponentData.IsValidIndex(ComponentId) && ComponentData[ComponentId].Level != -1)
+{
+return ComponentData[ComponentId].Level;
+}
+return -1;
 }
 
 int32 UUpgradeSubsystemBase::GetUpgradeLevelForActor(AActor* TargetActor, EUpgradableAspect Aspect) const
@@ -336,12 +328,11 @@ int32 UUpgradeSubsystemBase::GetUpgradeLevelForActor(AActor* TargetActor, EUpgra
 
 int32 UUpgradeSubsystemBase::GetNextLevel(const int32 ComponentId) const
 {
-	if (ComponentLevels.IsValidIndex(ComponentId) && ComponentLevels[ComponentId] != -1)
-	{
-		
-		return ComponentLevels[ComponentId] + 1;
-	}
-	return -1;
+if (ComponentData.IsValidIndex(ComponentId) && ComponentData[ComponentId].Level != -1)
+{
+return ComponentData[ComponentId].Level + 1;
+}
+return -1;
 }
 
 int32 UUpgradeSubsystemBase::GetMaxLevel(int32 ComponentId) const
@@ -558,9 +549,9 @@ const TArray<FUpgradeDefinition>* UUpgradeSubsystemBase::GetUpgradeDefinitions(F
 
 const TArray<FUpgradeDefinition>* UUpgradeSubsystemBase::GetUpgradeDefinitions(int32 ComponentId) const
 {
-	const UUpgradableComponent* Comp = GetComponentById(ComponentId);
-	if (!Comp) return nullptr;
-	return UpgradeCatalog.Find(Comp->UpgradePathId);
+if (!ComponentData.IsValidIndex(ComponentId))
+return nullptr;
+return UpgradeCatalog.Find(ComponentData[ComponentId].UpgradePathId);
 }
 
 const FUpgradeDefinition* UUpgradeSubsystemBase::GetUpgradeDefinitionForLevel(int32 ComponentId, int32 Level) const
