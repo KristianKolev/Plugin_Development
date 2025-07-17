@@ -15,6 +15,12 @@ class PLUGIN_DEVELOPMENT_API UMergeManagerSubsystem : public UUpgradeSubsystemBa
 	GENERATED_BODY()
 
 public:
+
+	UMergeManagerSubsystem();
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize() override;
+	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
+	
 	bool CanMerge(int32 ComponentId);
 	bool HandleMergeRequest(int32 ComponentId);
 

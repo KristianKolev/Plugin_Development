@@ -7,9 +7,11 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "UpgradeSubsystemBase.generated.h"
 
+
 DECLARE_LOG_CATEGORY_EXTERN(LogUpgradeSystem, Log, All);
 
 class UUpgradableComponent;
+class UUpgradeDataProvider;
 /**
  * 
  */
@@ -25,7 +27,7 @@ public:
 
 	int32 RegisterUpgradableComponent(UUpgradableComponent* Component);
 	void UnregisterUpgradableComponent(int32 ComponentId);
-
+	
 	void UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel);
 
 	// START section getters that return UUpgradableComponent
@@ -62,6 +64,7 @@ public:
 	// END section getters that return UUpgradableComponent
 
 	// START section getters that return FUpgradeDefinition
+	
 	UFUNCTION(BlueprintCallable, Category="Upgrade System|Query")
 	TArray<FUpgradeDefinition> GetUpgradeDefinitionsForPath(FName PathId) const;
 
@@ -182,6 +185,10 @@ protected:
 	*/
 	UPROPERTY()
 	TArray<int32> FreeComponentIndices;
+
+	// Loaders
+	TArray<UUpgradeDataProvider*> InitializeProviders();
+	void LoadCatalog(TArray<UUpgradeDataProvider*> DataProviders);
 	
 	// Upgrade Timer functions
 	float GetUpgradeTimerDuration(int32 ComponentId, int32 LevelIncrease) const;

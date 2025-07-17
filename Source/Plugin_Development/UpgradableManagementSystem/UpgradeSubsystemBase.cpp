@@ -3,6 +3,9 @@
 
 #include "UpgradeSubsystemBase.h"
 #include "UpgradableComponent.h"
+#include "UpgradeDataProvider.h"
+#include "UpgradeSettings.h"
+#include "TimerManager.h"
 
 DEFINE_LOG_CATEGORY(LogUpgradeSystem);
 
@@ -23,6 +26,8 @@ void UUpgradeSubsystemBase::Deinitialize()
 void UUpgradeSubsystemBase::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
+	const TArray<UUpgradeDataProvider*> DataProviders = InitializeProviders();
+	LoadCatalog(DataProviders);
 }
 
 int32 UUpgradeSubsystemBase::RegisterUpgradableComponent(UUpgradableComponent* Component)
@@ -65,6 +70,15 @@ void UUpgradeSubsystemBase::UnregisterUpgradableComponent(int32 ComponentId)
 	{
 		UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEMGR_INFO_05] Unregistered component ID %d. Total components %d"), ComponentId, RegisteredComponents.Num()-FreeComponentIndices.Num());
 	}
+}
+
+TArray<UUpgradeDataProvider*> UUpgradeSubsystemBase::InitializeProviders()
+{
+	const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
+	FString UpgradeDataFolderPath = Settings->UpgradeDataFolderPath;
+	
+	UUpgradeDataProvider* Scanner = NewObject<UUpgradeDataProvider>(this);
+	return Scanner->Scan(UpgradeDataFolderPath);
 }
 
 void UUpgradeSubsystemBase::UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel)
@@ -357,6 +371,22 @@ TMap<FName, int32> UUpgradeSubsystemBase::GetInProgressTotalResourceCost(int32 C
 		return UpgradeInProgressData[ComponentId].UpgradeResourceCost;
 	}
 	return TMap<FName, int32>();
+}
+
+void UUpgradeSubsystemBase::LoadCatalog(TArray<UUpgradeDataProvider*> DataProviders)
+{
+	if (DataProviders.Num() == 0)	return;
+
+	UpgradeCatalog.Empty();
+	ResourceTypes.Empty();
+
+	for (UUpgradeDataProvider* Provider : DataProviders)
+	{
+		if (!Provider) continue;
+		Provider->InitializeData(UpgradeCatalog, ResourceTypes);
+	}
+	UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEMGR_INFO_03] Loaded Upgrade Catalog from %d provider(s)"), DataProviders.Num());
+
 }
 
 float UUpgradeSubsystemBase::GetUpgradeTimerDuration(int32 ComponentId, int32 LevelIncrease) const

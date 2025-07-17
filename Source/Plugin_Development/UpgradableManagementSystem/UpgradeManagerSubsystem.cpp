@@ -1,17 +1,14 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "UpgradeManagerSubsystem.h"
 #include "UpgradableComponent.h"
-#include "UpgradeDataAssetProvider.h"
-#include "UpgradeDataTableProvider.h"
-#include "UpgradeJsonProvider.h"
-#include "AssetRegistry/AssetRegistryModule.h"
+
 #include "Engine/DataTable.h"
 #include "UpgradeDefinitionDataAsset.h"
-#include "UpgradeSettings.h"
-#include "TimerManager.h"
+
+
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
-#include "../CustomLogging.h"
+
 #include "Windows/WindowsApplication.h"
 
 
@@ -30,36 +27,13 @@ void UUpgradeManagerSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
-TArray<UUpgradeDataProvider*> UUpgradeManagerSubsystem::InitializeProviders()
-{
-	const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
-	FString UpgradeDataFolderPath = Settings->UpgradeDataFolderPath;
-	
-	UUpgradeDataProvider* Scanner = NewObject<UUpgradeDataProvider>(this);
-	return Scanner->Scan(UpgradeDataFolderPath);
-}
 
 void UUpgradeManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
-	const TArray<UUpgradeDataProvider*> DataProviders = InitializeProviders();
-	LoadCatalog(DataProviders);
+
 }
 
-void UUpgradeManagerSubsystem::LoadCatalog(TArray<UUpgradeDataProvider*> DataProviders)
-{
-    if (DataProviders.Num() == 0)	return;
-
-    UpgradeCatalog.Empty();
-    ResourceTypes.Empty();
-
-    for (UUpgradeDataProvider* Provider : DataProviders)
-    {
-	if (!Provider) continue;
-	Provider->InitializeData(UpgradeCatalog, ResourceTypes);
-    }
-	UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEMGR_INFO_03] Loaded Upgrade Catalog from %d provider(s)"), DataProviders.Num());
-}
 
 bool UUpgradeManagerSubsystem::RequestUpgradeForActor(AActor* TargetActor,
 													  EUpgradableAspect Aspect,

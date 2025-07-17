@@ -26,12 +26,9 @@ public:
 	virtual void Deinitialize() override;
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 
-	TArray<UUpgradeDataProvider*> InitializeProviders();
-
 	bool CanUpgrade(int32 ComponentId, int32 LevelIncrease, const TMap<FName, int32>& AvailableResources) const;
 	bool HandleUpgradeRequest(int32 ComponentId, int32 LevelIncrease, const TMap<FName, int32>& AvailableResources);
 	
-
 	/**
 		* Attempts to upgrade the component on TargetActor whose Aspect == the enum passed in.
 		* Returns true if the request was sent/accepted.
@@ -47,10 +44,4 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Upgrade")
 	bool UpgradeComponent(const int32 ComponentId, const TMap<FName, int32> AvailableResources, const int32 LevelIncrease = 1) { return HandleUpgradeRequest(ComponentId, LevelIncrease, AvailableResources) ;}
 
-
-protected:
-
-	// Loaders
-	void LoadCatalog(TArray<UUpgradeDataProvider*> DataProviders);
-	
 };
