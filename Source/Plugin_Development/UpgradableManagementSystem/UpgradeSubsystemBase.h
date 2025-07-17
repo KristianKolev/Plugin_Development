@@ -11,7 +11,32 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogUpgradeSystem, Log, All);
 
 class UUpgradableComponent;
+class AActor;
 class UUpgradeDataProvider;
+
+USTRUCT()
+struct PLUGIN_DEVELOPMENT_API FUpgradableComponentData
+{
+GENERATED_BODY()
+
+UPROPERTY()
+TWeakObjectPtr<UUpgradableComponent> Component;
+
+UPROPERTY()
+TWeakObjectPtr<AActor> Owner;
+
+UPROPERTY()
+FName UpgradePathId = NAME_None;
+
+UPROPERTY()
+EUpgradableAspect Aspect = EUpgradableAspect::None;
+
+UPROPERTY()
+EUpgradableCategory Category = EUpgradableCategory::None;
+
+UPROPERTY()
+int32 Level = -1;
+};
 /**
  * 
  */
@@ -179,33 +204,28 @@ public:
 	TMap<FName, int32> GetInProgressTotalResourceCost(int32 ComponentId) const;
 	
 	// END section getters that return resource info
-	
+
 protected:
+// Catalog of each Upgrade Path and its corresponding level progression.
+TMap<FName, TArray<FUpgradeDefinition>> UpgradeCatalog;
 
-	// Catalog of each Upgrade Path and its corresponding level progression.
-	TMap<FName, TArray<FUpgradeDefinition>> UpgradeCatalog;
-	
-	UPROPERTY()
-	TArray<TWeakObjectPtr<UUpgradableComponent>> RegisteredComponents;
-	
-	// Maps each component ID to the data for their pending upgrade.
-	UPROPERTY()
-	TMap<int32, FUpgradeInProgressData> UpgradeInProgressData;
+/** Cached data for each registered component indexed by component ID */
+UPROPERTY()
+TArray<FUpgradableComponentData> ComponentData;
 
-	/** List of all available resource types in the system as encountered in the catalog.*/
-	UPROPERTY(BlueprintReadOnly, Category = "Upgrade System|Resources")
-	TArray<FName> ResourceTypes;
-	
-	// Stores the current level of each component ID.
-	// TODO make this into a struct of component data. Cache them locally in the manager when the component registers itself. To be used for quick lookup instead of looping over all components in query functions.
-	UPROPERTY()
-	TArray<int32> ComponentLevels;
-	
-	/* Stack of free slots to be assigned to new components.
-	* Used to avoid re-allocating memory for new components when de-/registering.
-	*/
-	UPROPERTY()
-	TArray<int32> FreeComponentIndices;
+// Maps each component ID to the data for their pending upgrade.
+UPROPERTY()
+TMap<int32, FUpgradeInProgressData> UpgradeInProgressData;
+
+/** List of all available resource types in the system as encountered in the catalog.*/
+UPROPERTY(BlueprintReadOnly, Category = "Upgrade System|Resources")
+TArray<FName> ResourceTypes;
+
+/* Stack of free slots to be assigned to new components.
+ * Used to avoid re-allocating memory for new components when de-/registering.
+ */
+UPROPERTY()
+TArray<int32> FreeComponentIndices;
 
 	// Loaders
 	TArray<UUpgradeDataProvider*> InitializeProviders();
