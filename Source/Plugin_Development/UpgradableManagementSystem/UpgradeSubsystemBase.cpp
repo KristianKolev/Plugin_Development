@@ -30,45 +30,75 @@ void UUpgradeSubsystemBase::OnWorldBeginPlay(UWorld& InWorld)
 	LoadCatalog(DataProviders);
 }
 
+TArray<UUpgradeDataProvider*> UUpgradeSubsystemBase::InitializeProviders()
+{
+	const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
+	FString UpgradeDataFolderPath = Settings->UpgradeDataFolderPath;
+	
+	UUpgradeDataProvider* Scanner = NewObject<UUpgradeDataProvider>(this);
+	return Scanner->Scan(UpgradeDataFolderPath);
+}
+
+void UUpgradeSubsystemBase::LoadCatalog(TArray<UUpgradeDataProvider*> DataProviders)
+{
+	if (DataProviders.Num() == 0)	return;
+
+	UpgradeCatalog.Empty();
+	ResourceTypes.Empty();
+
+	for (UUpgradeDataProvider* Provider : DataProviders)
+	{
+		if (!Provider) continue;
+		Provider->InitializeData(UpgradeCatalog, ResourceTypes);
+	}
+	UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEMGR_INFO_03] Loaded Upgrade Catalog from %d provider(s)"), DataProviders.Num());
+
+}
+
 int32 UUpgradeSubsystemBase::RegisterUpgradableComponent(UUpgradableComponent* Component)
 {
-		int32 Id;
-		FUpgradableComponentData Entry;
+	int32 Id;
+	FUpgradableComponentData Entry;
+	
+	if (Component)
+	{
 		Entry.Component = Component;
-		Entry.Owner = Component ? Component->GetOwner() : nullptr;
-		Entry.UpgradePathId = Component ? Component->UpgradePathId : NAME_None;
-		Entry.Aspect = Component ? Component->GetUpgradableAspect() : EUpgradableAspect::None;
-		Entry.Category = Component ? Component->GetUpgradableCategory() : EUpgradableCategory::None;
-		Entry.Level = Component ? Component->InitialLevel : -1;
-		
-		if (FreeComponentIndices.Num() > 0)
-		{
+		Entry.Owner = Component->GetOwner();
+		Entry.UpgradePathId = Component->UpgradePathId;
+		Entry.Aspect = Component->GetUpgradableAspect();
+		Entry.Category = Component->GetUpgradableCategory();
+		Entry.Level = Component->InitialLevel;
+	}
+	
+	
+	if (FreeComponentIndices.Num() > 0)
+	{
 		Id = FreeComponentIndices.Pop(/*bAllowShrinking=*/false);
 		ComponentData[Id] = Entry;
-		}
-		else
-		{
+	}
+	else
+	{
 		Id = ComponentData.Add(Entry);
-		}
-		
-		if (UE_LOG_ACTIVE(LogUpgradeSystem, Verbose))
-		{
+	}
+	
+	if (UE_LOG_ACTIVE(LogUpgradeSystem, Verbose))
+	{
 		UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEMGR_INFO_04] Registered component ID %d at level %d. Total components %d"), Id, Entry.Level, ComponentData.Num() - FreeComponentIndices.Num());
-		}
-		
-		return Id;
-		}
+	}
+	
+	return Id;
+}
 
 void UUpgradeSubsystemBase::UnregisterUpgradableComponent(int32 ComponentId)
 	{
 	if (ComponentData.IsValidIndex(ComponentId))
 	{
-	if (IsUpgradeTimerActive(ComponentId))
-	{
-	CancelUpgrade(ComponentId);
-	}
-	ComponentData[ComponentId] = FUpgradableComponentData();
-	FreeComponentIndices.Add(ComponentId);
+		if (IsUpgradeTimerActive(ComponentId))
+		{
+			CancelUpgrade(ComponentId);
+		}
+		ComponentData[ComponentId] = FUpgradableComponentData();
+		FreeComponentIndices.Add(ComponentId);
 	}
 	
 	if (UE_LOG_ACTIVE(LogUpgradeSystem, Verbose))
@@ -77,84 +107,84 @@ void UUpgradeSubsystemBase::UnregisterUpgradableComponent(int32 ComponentId)
 	}
 }
 
-bool UUpgradeSubsystemBase::CanUpgrade(int32 ComponentId, int32 LevelIncrease,
-	const TMap<FName, int32>& AvailableResources) const
+bool UUpgradeSubsystemBase::CanUpgrade(const int32 ComponentId, const int32 LevelIncrease,
+                                       const TMap<FName, int32>& AvailableResources) const
 {
-	    UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEMGR_INFO_01] Checking upgrade eligibility for component %d (increase %d)"), ComponentId, LevelIncrease);
+	UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEMGR_INFO_01] Checking upgrade eligibility for component %d (increase %d)"), ComponentId, LevelIncrease);
 
-   bool Success = false;
+	bool Success = false;
 
-   if (!GetComponentById(ComponentId))
-   {
-       UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_00] Component %d not registered"), ComponentId);
-       return false;
-   }
-   // Future implementation idea: Add upgrade queue to chain multiple upgrades
-   if (IsUpgradeTimerActive(ComponentId))
-   {
-       UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_01] Component %d already upgrading"), ComponentId);
-       return false;
-   }
+	if (!GetComponentById(ComponentId))
+	{
+		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_00] Component %d not registered"), ComponentId);
+		return false;
+	}
+	// Future implementation idea: Add upgrade queue to chain multiple upgrades
+	if (IsUpgradeTimerActive(ComponentId))
+	{
+		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_01] Component %d already upgrading"), ComponentId);
+		return false;
+	}
 
-   if (LevelIncrease <= 0)
-   {
-       UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_02] Invalid level increase %d for component %d"), LevelIncrease, ComponentId);
-       return false;
-   }
-   // Trying to upgrade to a level higher than the max level
-   if (GetCurrentLevel(ComponentId) + LevelIncrease > GetMaxLevel(ComponentId))
-   {
-       UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_03] Requested level exceeds max for component %d"), ComponentId);
-       return false;
-   }
+	if (LevelIncrease <= 0)
+	{
+		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_02] Invalid level increase %d for component %d"), LevelIncrease, ComponentId);
+		return false;
+	}
+	// Trying to upgrade to a level higher than the max level
+	if (GetCurrentLevel(ComponentId) + LevelIncrease > GetMaxLevel(ComponentId))
+	{
+		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_03] Requested level exceeds max for component %d"), ComponentId);
+		return false;
+	}
 
-   if (const TArray<FUpgradeDefinition>* UpgradeDefinitions = GetUpgradeDefinitions(ComponentId))
-   {
-       const FUpgradeDefinition* LevelData = nullptr;
+	if (const TArray<FUpgradeDefinition>* UpgradeDefinitions = GetUpgradeDefinitions(ComponentId))
+	{
+		const FUpgradeDefinition* LevelData = nullptr;
 
-       TMap<FName, int32> TotalResourceCosts;
-       // Iterate over all levels if trying to upgrade several levels at once
-       for (int32 i = GetNextLevel(ComponentId); i <= GetCurrentLevel(ComponentId) + LevelIncrease; ++i)
-       {
-	   LevelData = &(*UpgradeDefinitions)[i];
-	   if (LevelData->bUpgradeLocked)
-	   {
-	       UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_04] Level %d locked for component %d"), i, ComponentId);
-	       return false;
-	   }
-	   FName ResourceType ;
-	   // Add up the required resource cost for each resource for this level
-	   for (int32 j = 0; j < LevelData->ResourceTypeIndices.Num(); ++j)
-	   {
-	       ResourceType = GetResourceTypeName(LevelData->ResourceTypeIndices[j]);
-	       // no resource of the required type was provided
-	       if (!AvailableResources.Contains(ResourceType))
-	       {
-		   UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_05] Missing resource '%s' for component %d"), *ResourceType.ToString(), ComponentId);
-		   return false;
-	       }
-	       TotalResourceCosts.FindOrAdd(ResourceType) += LevelData->UpgradeCosts[j];
-	   }
-       }
-       TArray<FName> RequiredResources;
-       TotalResourceCosts.GetKeys(RequiredResources);
-       for (FName ResourceType : RequiredResources)
-       {
-	   // not enough resources of the required type
-	   if (TotalResourceCosts[ResourceType] > AvailableResources.FindRef(ResourceType))
-	   {
-	       UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_06] Insufficient '%s' for component %d"), *ResourceType.ToString(), ComponentId);
-	       return false;
-	   }
-       }
+		TMap<FName, int32> TotalResourceCosts;
+		// Iterate over all levels if trying to upgrade several levels at once
+		for (int32 i = GetNextLevel(ComponentId); i <= GetCurrentLevel(ComponentId) + LevelIncrease; ++i)
+		{
+			LevelData = &(*UpgradeDefinitions)[i];
+			if (LevelData->bUpgradeLocked)
+			{
+				UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_04] Level %d locked for component %d"), i, ComponentId);
+				return false;
+			}
+			FName ResourceType ;
+			// Add up the required resource cost for each resource for this level
+			for (int32 j = 0; j < LevelData->ResourceTypeIndices.Num(); ++j)
+			{
+				ResourceType = GetResourceTypeName(LevelData->ResourceTypeIndices[j]);
+				// no resource of the required type was provided
+				if (!AvailableResources.Contains(ResourceType))
+				{
+				UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_05] Missing resource '%s' for component %d"), *ResourceType.ToString(), ComponentId);
+				return false;
+				}
+				TotalResourceCosts.FindOrAdd(ResourceType) += LevelData->UpgradeCosts[j];
+			}
+		}
+		TArray<FName> RequiredResources;
+		TotalResourceCosts.GetKeys(RequiredResources);
+		for (FName ResourceType : RequiredResources)
+		{
+			// not enough resources of the required type
+			if (TotalResourceCosts[ResourceType] > AvailableResources.FindRef(ResourceType))
+			{
+		       UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_06] Insufficient '%s' for component %d"), *ResourceType.ToString(), ComponentId);
+		       return false;
+			}
+		}
 
-       Success = true;
-       UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEMGR_INFO_02] Component %d can upgrade by %d levels"), ComponentId, LevelIncrease);
-   }
-   return Success;
+		Success = true;
+		UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEMGR_INFO_02] Component %d can upgrade by %d levels"), ComponentId, LevelIncrease);
+	}
+	return Success;
 }
 
-bool UUpgradeSubsystemBase::HandleUpgradeRequest(int32 ComponentId, int32 LevelIncrease,
+bool UUpgradeSubsystemBase::HandleUpgradeRequest(const int32 ComponentId, const int32 LevelIncrease,
 	const TMap<FName, int32>& AvailableResources)
 {
 	if (!CanUpgrade(ComponentId, LevelIncrease, AvailableResources)) return false;
@@ -176,29 +206,17 @@ bool UUpgradeSubsystemBase::HandleUpgradeRequest(int32 ComponentId, int32 LevelI
 	return true;
 }
 
-TArray<UUpgradeDataProvider*> UUpgradeSubsystemBase::InitializeProviders()
-{
-	const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
-	FString UpgradeDataFolderPath = Settings->UpgradeDataFolderPath;
-	
-	UUpgradeDataProvider* Scanner = NewObject<UUpgradeDataProvider>(this);
-	return Scanner->Scan(UpgradeDataFolderPath);
-}
-
 void UUpgradeSubsystemBase::UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel)
 {
-if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
-{
-if (ComponentData.IsValidIndex(ComponentId))
-{
-ComponentData[ComponentId].Level = NewLevel;
-}
-Comp->Client_SetLevel(NewLevel);
-}
+	if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
+	{
+		ComponentData[ComponentId].Level = NewLevel;
+		Comp->Client_SetLevel(NewLevel);
+	}
 }
 
-bool UUpgradeSubsystemBase::RequestUpgradeForActor(AActor* TargetActor, EUpgradableAspect Aspect, int32 LevelIncrease,
-	const TArray<FName>& ResourceTypesArray, const TArray<int32>& ResourceAmounts)
+bool UUpgradeSubsystemBase::RequestUpgradeForActor(AActor* TargetActor, const EUpgradableAspect Aspect, const int32 LevelIncrease,
+	const TArray<FName>& ResourceTypesArray, const TArray<int32>& ResourceAmounts) const
 {
 	if (!TargetActor)
 		return false;
@@ -211,136 +229,141 @@ bool UUpgradeSubsystemBase::RequestUpgradeForActor(AActor* TargetActor, EUpgrada
 	return true;
 }
 
-UUpgradableComponent* UUpgradeSubsystemBase::GetComponentById(int32 Id) const
+UUpgradableComponent* UUpgradeSubsystemBase::GetComponentById(const int32 Id) const
 {
-return (ComponentData.IsValidIndex(Id) && ComponentData[Id].Component.IsValid())
-? ComponentData[Id].Component.Get()
-: nullptr;
+	return (ComponentData.IsValidIndex(Id) && ComponentData[Id].Component.IsValid())
+	? ComponentData[Id].Component.Get() : nullptr;
 }
 
-UUpgradableComponent* UUpgradeSubsystemBase::FindComponentOnActorByAspect(AActor* TargetActor,
-EUpgradableAspect Aspect) const
-	{
-	if (!TargetActor)
-	return nullptr;
-	
+UUpgradableComponent* UUpgradeSubsystemBase::FindComponentOnActorByAspect(AActor* TargetActor, const EUpgradableAspect Aspect) const
+{
+	if (!TargetActor) return nullptr;
+	// We prefer doing this, rather than using GetComponent on the TargetActor, since the Actor might have a long list of components.
+	// In most real world use cases, this would be more performant.
 	for (const FUpgradableComponentData& Entry : ComponentData)
 	{
-	if (!Entry.Component.IsValid())
-	continue;
-	if (Entry.Owner.Get() != TargetActor)
-	continue;
-	if (Entry.Aspect != Aspect)
-	continue;
-	return Entry.Component.Get();
+		if (Entry.Aspect != Aspect) continue;
+		if (!Entry.Component.IsValid())	continue;
+		if (Entry.Owner.Get() != TargetActor) continue;
+		
+		return Entry.Component.Get();
 	}
-	
 	return nullptr;
-	}
+}
 
 UUpgradableComponent* UUpgradeSubsystemBase::FindComponentOnActorByCategory(AActor* TargetActor,
-	EUpgradableCategory Category) const
-	{
-	if (!TargetActor)
-	return nullptr;
-	
+	const EUpgradableCategory Category) const
+{
+	if (!TargetActor) return nullptr;
+	// We prefer doing this, rather than using GetComponent on the TargetActor, since the Actor might have a long list of components.
+	// In most real world use cases, this would be more performant.
 	for (const FUpgradableComponentData& Entry : ComponentData)
 	{
-	if (!Entry.Component.IsValid())
-	continue;
-	if (Entry.Owner.Get() != TargetActor)
-	continue;
-	if (Entry.Category != Category)
-	continue;
-	return Entry.Component.Get();
+		if (Entry.Category != Category) continue;
+		if (!Entry.Component.IsValid())	continue;
+		if (Entry.Owner.Get() != TargetActor) continue;
+		
+		return Entry.Component.Get();
 	}
 	
 	return nullptr;
 }
 
-	TArray<UUpgradableComponent*> UUpgradeSubsystemBase::GetComponentsByAspect(EUpgradableAspect Aspect,
-	int32 LevelFilter) const
-	{
+TArray<UUpgradableComponent*> UUpgradeSubsystemBase::GetComponentsByAspect(const EUpgradableAspect Aspect, const int32 LevelFilter) const
+{
 	TArray<UUpgradableComponent*> Result;
 	
-	for (int32 Id = 0; Id < ComponentData.Num(); ++Id)
+	for (const FUpgradableComponentData& Entry : ComponentData)
 	{
-	const FUpgradableComponentData& Entry = ComponentData[Id];
-	if (!Entry.Component.IsValid())
-	continue;
-	if (Entry.Aspect != Aspect)
-	continue;
-	if (LevelFilter >= 0 && Entry.Level != LevelFilter)
-	continue;
-	Result.Add(Entry.Component.Get());
-	}
-	
-	return Result;
+		if (Entry.Aspect != Aspect)	continue;
+		if (!Entry.Component.IsValid())	continue;
+		// If a level filter is specified, ensure it matches
+		if (LevelFilter >= 0 && Entry.Level != LevelFilter)	continue;
+		
+		Result.Add(Entry.Component.Get());
 	}
 
-	TArray<UUpgradableComponent*> UUpgradeSubsystemBase::GetComponentsByUpgradePath(FName PathId, int32 LevelFilter) const
-	{
-	TArray<UUpgradableComponent*> Result;
-	
-	for (int32 Id = 0; Id < ComponentData.Num(); ++Id)
-	{
-	const FUpgradableComponentData& Entry = ComponentData[Id];
-	if (!Entry.Component.IsValid())
-	continue;
-	if (Entry.UpgradePathId != PathId)
-	continue;
-	if (LevelFilter >= 0 && Entry.Level != LevelFilter)
-	continue;
-	Result.Add(Entry.Component.Get());
-	}
-	
 	return Result;
+}
+
+TArray<UUpgradableComponent*> UUpgradeSubsystemBase::GetComponentsByUpgradePath(const FName PathId, const int32 LevelFilter) const
+{
+	TArray<UUpgradableComponent*> Result;
+
+	for (const FUpgradableComponentData& Entry : ComponentData)
+	{
+		if (Entry.UpgradePathId != PathId) continue;
+		if (!Entry.Component.IsValid())	continue;
+		// If a level filter is specified, ensure it matches
+		if (LevelFilter >= 0 && Entry.Level != LevelFilter)	continue;
+		
+		Result.Add(Entry.Component.Get());
+	}
+
+	return Result;
+}
+
+TArray<UUpgradableComponent*> UUpgradeSubsystemBase::GetComponentsByActor(AActor* TargetActor)
+{
+	TArray<UUpgradableComponent*> Results;
+	if (!TargetActor) return Results;
+	// We prefer doing this, rather than using GetComponent on the TargetActor, since the Actor might have a long list of components.
+	// In most real world use cases, this would be more performant.
+	for (const FUpgradableComponentData& Entry : ComponentData)
+	{
+		if (!Entry.Component.IsValid())	continue;
+		if (Entry.Owner.Get() != TargetActor) continue;
+		
+		Results.Add(Entry.Component.Get());
 	}
 	
-	TArray<FUpgradeDefinition> UUpgradeSubsystemBase::GetUpgradeDefinitionsForPath(FName PathId) const
+	return Results;
+}
+
+TArray<FUpgradeDefinition> UUpgradeSubsystemBase::GetUpgradeDefinitionsForPath(const FName PathId) const
+{
+	TArray<FUpgradeDefinition> Result;
+	const TArray<FUpgradeDefinition>* UpgradeDefinitions = GetUpgradeDefinitions(PathId);
+	if (UpgradeDefinitions)
 	{
-		TArray<FUpgradeDefinition> Result;
-		const TArray<FUpgradeDefinition>* UpgradeDefinitions = GetUpgradeDefinitions(PathId);
-		if (UpgradeDefinitions)
-		{
-			Result = *UpgradeDefinitions;
-		}
-		return Result;
+		Result = *UpgradeDefinitions;
 	}
+	return Result;
+}
 
 int32 UUpgradeSubsystemBase::GetCurrentLevel(const int32 ComponentId) const
 {
-if (ComponentData.IsValidIndex(ComponentId) && ComponentData[ComponentId].Level != -1)
-{
-return ComponentData[ComponentId].Level;
-}
-return -1;
+	if (ComponentData.IsValidIndex(ComponentId) && ComponentData[ComponentId].Level != -1)
+	{
+		return ComponentData[ComponentId].Level;
+	}
+	return -1;
 }
 
-int32 UUpgradeSubsystemBase::GetUpgradeLevelForActor(AActor* TargetActor, EUpgradableAspect Aspect) const
+int32 UUpgradeSubsystemBase::GetUpgradeLevelForActor(AActor* TargetActor, const EUpgradableAspect Aspect) const
 {
 	if (!TargetActor) return -1;
 
-	UUpgradableComponent* Comp = FindComponentOnActorByAspect(TargetActor, Aspect);
+	const UUpgradableComponent* Comp = FindComponentOnActorByAspect(TargetActor, Aspect);
 	if (!Comp) return -1;
 	return GetCurrentLevel(Comp->GetComponentId());
 }
 
 int32 UUpgradeSubsystemBase::GetNextLevel(const int32 ComponentId) const
 {
-if (ComponentData.IsValidIndex(ComponentId) && ComponentData[ComponentId].Level != -1)
-{
-return ComponentData[ComponentId].Level + 1;
-}
-return -1;
+	if (ComponentData.IsValidIndex(ComponentId) && ComponentData[ComponentId].Level != -1)
+	{
+		return ComponentData[ComponentId].Level + 1;
+	}
+	return -1;
 }
 
-int32 UUpgradeSubsystemBase::GetMaxLevel(int32 ComponentId) const
+int32 UUpgradeSubsystemBase::GetMaxLevel(const int32 ComponentId) const
 {
 	return GetUpgradeDefinitions(ComponentId)->Num()-1;
 }
 
-int32 UUpgradeSubsystemBase::GetInProgressLevelIncrease(int32 ComponentId) const
+int32 UUpgradeSubsystemBase::GetInProgressLevelIncrease(const int32 ComponentId) const
 {
 	if ( UpgradeInProgressData.Contains(ComponentId))
 	{
@@ -370,14 +393,14 @@ int32 UUpgradeSubsystemBase::GetNextLevelUpgradeTime(const int32 ComponentId) co
 	return SecondsForUpgrade;
 }
 
-float UUpgradeSubsystemBase::UpdateUpgradeTimer(int32 ComponentId, float DeltaTime)
+float UUpgradeSubsystemBase::UpdateUpgradeTimer(const int32 ComponentId, const float DeltaTime)
 {
 	if (UpgradeInProgressData.Find(ComponentId))
 	{
-		FTimerHandle& Handle = UpgradeInProgressData[ComponentId].UpgradeTimerHandle;
-		FTimerManager& TimerManager = GetWorld()->GetTimerManager();
-		float TimeRemaining = TimerManager.GetTimerRemaining(Handle);
-		float NewTimeRemaining = FMath::Max(0.f, FMath::FloorToInt(TimeRemaining + DeltaTime));
+		const FTimerHandle& Handle = UpgradeInProgressData[ComponentId].UpgradeTimerHandle;
+		const FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+		const float TimeRemaining = TimerManager.GetTimerRemaining(Handle);
+		const float NewTimeRemaining = FMath::Max(0.f, FMath::FloorToInt(TimeRemaining + DeltaTime));
 		
 		if (UUpgradableComponent* Comp = GetComponentById(ComponentId))
 		{
@@ -399,7 +422,7 @@ float UUpgradeSubsystemBase::UpdateUpgradeTimer(int32 ComponentId, float DeltaTi
 	return -1.f;
 }
 
-float UUpgradeSubsystemBase::GetUpgradeTimeRemaining(int32 ComponentId) const
+float UUpgradeSubsystemBase::GetUpgradeTimeRemaining(const int32 ComponentId) const
 {
 	if (UpgradeInProgressData.Find(ComponentId))
 	{
@@ -409,7 +432,7 @@ float UUpgradeSubsystemBase::GetUpgradeTimeRemaining(int32 ComponentId) const
 	return -1.f;
 }
 
-float UUpgradeSubsystemBase::GetInProgressTotalUpgradeTime(int32 ComponentId) const
+float UUpgradeSubsystemBase::GetInProgressTotalUpgradeTime(const int32 ComponentId) const
 {
 	if (UpgradeInProgressData.Contains(ComponentId))
 	{
@@ -420,7 +443,7 @@ float UUpgradeSubsystemBase::GetInProgressTotalUpgradeTime(int32 ComponentId) co
 
 int32 UUpgradeSubsystemBase::GetResourceTypeIndex(const FName& TypeName) const
 {
-	int32 FoundIndex = ResourceTypes.IndexOfByKey(TypeName);
+	const int32 FoundIndex = ResourceTypes.IndexOfByKey(TypeName);
 	if (FoundIndex != INDEX_NONE)
 	{
 		return FoundIndex;
@@ -428,7 +451,7 @@ int32 UUpgradeSubsystemBase::GetResourceTypeIndex(const FName& TypeName) const
 	return -1;
 }
 
-FName UUpgradeSubsystemBase::GetResourceTypeName(int32 Index) const
+FName UUpgradeSubsystemBase::GetResourceTypeName(const int32 Index) const
 {
 	return ResourceTypes.IsValidIndex(Index)
 		? ResourceTypes[Index]
@@ -477,21 +500,7 @@ TMap<FName, int32> UUpgradeSubsystemBase::GetInProgressTotalResourceCost(int32 C
 	return TMap<FName, int32>();
 }
 
-void UUpgradeSubsystemBase::LoadCatalog(TArray<UUpgradeDataProvider*> DataProviders)
-{
-	if (DataProviders.Num() == 0)	return;
 
-	UpgradeCatalog.Empty();
-	ResourceTypes.Empty();
-
-	for (UUpgradeDataProvider* Provider : DataProviders)
-	{
-		if (!Provider) continue;
-		Provider->InitializeData(UpgradeCatalog, ResourceTypes);
-	}
-	UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEMGR_INFO_03] Loaded Upgrade Catalog from %d provider(s)"), DataProviders.Num());
-
-}
 
 float UUpgradeSubsystemBase::GetUpgradeTimerDuration(int32 ComponentId, int32 LevelIncrease) const
 {
@@ -549,9 +558,9 @@ const TArray<FUpgradeDefinition>* UUpgradeSubsystemBase::GetUpgradeDefinitions(F
 
 const TArray<FUpgradeDefinition>* UUpgradeSubsystemBase::GetUpgradeDefinitions(int32 ComponentId) const
 {
-if (!ComponentData.IsValidIndex(ComponentId))
-return nullptr;
-return UpgradeCatalog.Find(ComponentData[ComponentId].UpgradePathId);
+	if (!ComponentData.IsValidIndex(ComponentId)) return nullptr;
+	
+	return UpgradeCatalog.Find(ComponentData[ComponentId].UpgradePathId);
 }
 
 const FUpgradeDefinition* UUpgradeSubsystemBase::GetUpgradeDefinitionForLevel(int32 ComponentId, int32 Level) const

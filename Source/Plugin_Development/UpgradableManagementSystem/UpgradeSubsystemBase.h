@@ -14,28 +14,43 @@ class UUpgradableComponent;
 class AActor;
 class UUpgradeDataProvider;
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct PLUGIN_DEVELOPMENT_API FUpgradableComponentData
 {
-GENERATED_BODY()
+	GENERATED_BODY()
+	
+	UPROPERTY()
+	FName UpgradePathId = NAME_None;
+		
+	UPROPERTY()
+	int32 Level = -1;
+	
+	UPROPERTY()
+	TWeakObjectPtr<UUpgradableComponent> Component = nullptr;
 
-UPROPERTY()
-TWeakObjectPtr<UUpgradableComponent> Component;
+	UPROPERTY()
+	TWeakObjectPtr<AActor> Owner = nullptr;
 
-UPROPERTY()
-TWeakObjectPtr<AActor> Owner;
+	UPROPERTY()
+	EUpgradableAspect Aspect = EUpgradableAspect::None;
 
-UPROPERTY()
-FName UpgradePathId = NAME_None;
+	UPROPERTY()
+	EUpgradableCategory Category = EUpgradableCategory::None;
 
-UPROPERTY()
-EUpgradableAspect Aspect = EUpgradableAspect::None;
+	// only compare the four “key” fields:
+	bool operator==(FUpgradableComponentData const& Other) const
+	{
+		return UpgradePathId == Other.UpgradePathId
+			&& Level         == Other.Level
+			&& Aspect        == Other.Aspect
+			&& Category      == Other.Category;
+	}
 
-UPROPERTY()
-EUpgradableCategory Category = EUpgradableCategory::None;
+	bool operator!=(FUpgradableComponentData const& Other) const
+	{
+		return !(*this == Other);
+	}
 
-UPROPERTY()
-int32 Level = -1;
 };
 /**
  * 
@@ -56,7 +71,7 @@ public:
 	// START section upgrade handling
 	
 	bool CanUpgrade(int32 ComponentId, int32 LevelIncrease, const TMap<FName, int32>& AvailableResources) const;
-	bool HandleUpgradeRequest(int32 ComponentId, int32 LevelIncrease, const TMap<FName, int32>& AvailableResources);
+	bool HandleUpgradeRequest(const int32 ComponentId, const int32 LevelIncrease, const TMap<FName, int32>& AvailableResources);
 	void UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel);
 
 	/**
@@ -68,7 +83,7 @@ public:
 								EUpgradableAspect Aspect,
 								int32 LevelIncrease,
 								const TArray<FName>& ResourceTypesArray,
-								const TArray<int32>& ResourceAmounts);
+								const TArray<int32>& ResourceAmounts) const;
 
 	/** Attempts to upgrade a component by the specified number of levels */
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Upgrade")
@@ -80,7 +95,7 @@ public:
 	
 	/** Gets an upgradable component by its unique ID */
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Query")
-	UUpgradableComponent* GetComponentById(int32 Id) const;
+	UUpgradableComponent* GetComponentById(const int32 Id) const;
 	
 	/** Returns the first UUpgradableComponent on TargetActor with matching Aspect. */
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Query")
@@ -106,6 +121,13 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category="Upgrade System|Query")
 	TArray<UUpgradableComponent*> GetComponentsByUpgradePath(FName PathId, int32 LevelFilter = -1) const;
+
+	UFUNCTION(BlueprintCallable, Category="Upgrade System|Query")
+	TArray<UUpgradableComponent*> GetComponentsByActor (AActor* TargetActor) ;
+	
+	UFUNCTION(BlueprintCallable, Category="Upgrade System|Query")
+	FUpgradableComponentData GetComponentDataByID(const int32 ComponentId) const
+	{ return ComponentData.IsValidIndex(ComponentId) ? ComponentData[ComponentId] : FUpgradableComponentData(); };
 
 	// END section getters that return UUpgradableComponent
 
@@ -154,7 +176,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Timer")
 	void CancelUpgrade(int32 ComponentId);
 	
-	// Is an upgrade in progress on the component
+	// Is an upgrade in progress on the component?
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Timer")
 	bool IsUpgradeTimerActive(int32 ComponentId) const {return UpgradeInProgressData.Contains(ComponentId);}
 
@@ -165,7 +187,7 @@ public:
 	/**
 	 * Updates the upgrade timer for the specified component by the specified amount of time.
 	 
-	 * @param DeltaTime - Increase or reduce the timer by this amount of seconds.
+	 * @param DeltaTime - Increase or reduce the timer by this number of seconds.
 	 * @return - The remaining time until completion or -1.f if the upgrade was completed.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Timer")
@@ -206,26 +228,26 @@ public:
 	// END section getters that return resource info
 
 protected:
-// Catalog of each Upgrade Path and its corresponding level progression.
-TMap<FName, TArray<FUpgradeDefinition>> UpgradeCatalog;
+	// Catalog of each Upgrade Path and its corresponding level progression.
+	TMap<FName, TArray<FUpgradeDefinition>> UpgradeCatalog;
 
-/** Cached data for each registered component indexed by component ID */
-UPROPERTY()
-TArray<FUpgradableComponentData> ComponentData;
+	/** Cached data for each registered component indexed by component ID */
+	UPROPERTY()
+	TArray<FUpgradableComponentData> ComponentData;
 
-// Maps each component ID to the data for their pending upgrade.
-UPROPERTY()
-TMap<int32, FUpgradeInProgressData> UpgradeInProgressData;
+	// Maps each component ID to the data for their pending upgrade.
+	UPROPERTY()
+	TMap<int32, FUpgradeInProgressData> UpgradeInProgressData;
 
-/** List of all available resource types in the system as encountered in the catalog.*/
-UPROPERTY(BlueprintReadOnly, Category = "Upgrade System|Resources")
-TArray<FName> ResourceTypes;
+	/** List of all available resource types in the system as encountered in the catalog.*/
+	UPROPERTY(BlueprintReadOnly, Category = "Upgrade System|Resources")
+	TArray<FName> ResourceTypes;
 
-/* Stack of free slots to be assigned to new components.
- * Used to avoid re-allocating memory for new components when de-/registering.
- */
-UPROPERTY()
-TArray<int32> FreeComponentIndices;
+	/* Stack of free slots to be assigned to new components.
+	 * Used to avoid re-allocating memory for new components when de-/registering.
+	 */
+	UPROPERTY()
+	TArray<int32> FreeComponentIndices;
 
 	// Loaders
 	TArray<UUpgradeDataProvider*> InitializeProviders();
