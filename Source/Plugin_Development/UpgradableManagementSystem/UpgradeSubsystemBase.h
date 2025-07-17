@@ -27,9 +27,30 @@ public:
 
 	int32 RegisterUpgradableComponent(UUpgradableComponent* Component);
 	void UnregisterUpgradableComponent(int32 ComponentId);
+
+	// START section upgrade handling
 	
+	bool CanUpgrade(int32 ComponentId, int32 LevelIncrease, const TMap<FName, int32>& AvailableResources) const;
+	bool HandleUpgradeRequest(int32 ComponentId, int32 LevelIncrease, const TMap<FName, int32>& AvailableResources);
 	void UpdateUpgradeLevel(const int32 ComponentId, const int32 NewLevel);
 
+	/**
+		* Attempts to upgrade the component on TargetActor whose Aspect == the enum passed in.
+		* Returns true if the request was sent/accepted.
+		*/
+	UFUNCTION(BlueprintCallable, Category="Upgrade System|Upgrade")
+	bool RequestUpgradeForActor(AActor* TargetActor,
+								EUpgradableAspect Aspect,
+								int32 LevelIncrease,
+								const TArray<FName>& ResourceTypesArray,
+								const TArray<int32>& ResourceAmounts);
+
+	/** Attempts to upgrade a component by the specified number of levels */
+	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Upgrade")
+	bool UpgradeComponent(const int32 ComponentId, const TMap<FName, int32> AvailableResources, const int32 LevelIncrease = 1) { return HandleUpgradeRequest(ComponentId, LevelIncrease, AvailableResources) ;}
+
+	// END section upgrade handling
+	
 	// START section getters that return UUpgradableComponent
 	
 	/** Gets an upgradable component by its unique ID */
