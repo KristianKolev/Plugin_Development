@@ -11,8 +11,8 @@ UUpgradeJsonProvider::UUpgradeJsonProvider()
 {
 }
 
-void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>> &OutCatalog,
-	TArray<FName> &OutResourceTypes)
+void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>>& OutCatalog,
+	TArray<FName>& OutResourceTypes)
 {
 	if (DetectedFiles.Num() == 0)
 	{
@@ -20,9 +20,12 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
 		return;
 	}
 
-		int32 LoadedFiles = 0;
-		// Iterate over each detected JSON file
-		for (const FString &File : DetectedFiles)
+	const UUpgradeSettings* Settings = GetDefault<UUpgradeSettings>();
+	const FUpgradeJsonFieldNames& Fields = Settings->JsonFieldNames;
+
+	int32 LoadedFiles = 0;
+	// Iterate over each detected JSON file
+	for (const FString& File : DetectedFiles)
 	{
 		FString JsonString;
 		if (!FFileHelper::LoadFileToString(JsonString, *File))
@@ -39,70 +42,70 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
 			continue;
 		}
 
-				// Fallback to file name if no UpgradePathId is set
-				FName PathId = FName(*Root->GetStringField(TEXT("UpgradePathId")));
-				if (PathId.IsNone())
-				{
-						PathId = FName(*FPaths::GetBaseFilename(File));
-						UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEJSON_INFO_02] Using filename '%s' as UpgradePathId for file: %s"), *PathId.ToString(), *File);
-				}
+		// Fallback to file name if no UpgradePathId is set
+		FName PathId = FName(*Root->GetStringField(Fields.UpgradePathIdField));
+		if (PathId.IsNone())
+		{
+			PathId = FName(*FPaths::GetBaseFilename(File));
+			UE_LOG(LogUpgradeSystem, Verbose, TEXT("[UPGRADEJSON_INFO_02] Using filename '%s' as UpgradePathId for file: %s"), *PathId.ToString(), *File);
+		}
 
 		int32 MaxLevel = 1;
-		Root->TryGetNumberField(TEXT("MaxLevel"), MaxLevel);
+		Root->TryGetNumberField(Fields.MaxLevelField, MaxLevel);
 
-		TArray<FUpgradeDefinition> *ExistingArray = OutCatalog.Find(PathId);
+		TArray<FUpgradeDefinition>* ExistingArray = OutCatalog.Find(PathId);
 		if (ExistingArray)
 		{
 			UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADECATALOG_WARN_01] Duplicate UpgradePath '%s' found in JSON file '%s'. Overriding previous data."),
-				   *PathId.ToString(), *FPaths::GetCleanFilename(File));
+			*PathId.ToString(), *FPaths::GetCleanFilename(File));
 			ExistingArray->Reset();
 		}
 
-		TArray<FUpgradeDefinition> &LevelDataArray = OutCatalog.FindOrAdd(PathId);
+		TArray<FUpgradeDefinition>& LevelDataArray = OutCatalog.FindOrAdd(PathId);
 		LevelDataArray.SetNum(MaxLevel + 1);
 
 		int32 ProcessedLevels = 0;
 		TMap<FName, int32> PreviousResourceCost;
 		int32 PreviousTimeCost = 0;
 
-				// Process values from level overrides into the catalog
-				const TArray<TSharedPtr<FJsonValue>> *LevelOverrides;
-				if (!Root->TryGetArrayField(TEXT("LevelOverrides"), LevelOverrides) || LevelOverrides->Num() == 0)
-				{
-						UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEJSON_ERR_03] JSON file %s missing 'LevelOverrides' array"), *File);
-						continue;
-				}
-
-				// Ensure there is always a level-0 override
-				const TSharedPtr<FJsonObject> *FirstOverrideObj;
-				if (!(*LevelOverrides)[0]->TryGetObject(FirstOverrideObj) || (*FirstOverrideObj)->GetIntegerField(TEXT("UpgradeLevel")) != 0)
-				{
-						UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEJSON_ERR_04] First level override must be level 0 in file '%s'"), *File);
-						continue;
-				}
-
-		for (const TSharedPtr<FJsonValue> &OverrideVal : *LevelOverrides)
+		// Process values from level overrides into the catalog
+		const TArray<TSharedPtr<FJsonValue>>* LevelOverrides;
+		if (!Root->TryGetArrayField(Fields.LevelOverridesField, LevelOverrides) || LevelOverrides->Num() == 0)
 		{
-						const TSharedPtr<FJsonObject> *OverrideObj;
-						if (!OverrideVal->TryGetObject(OverrideObj))
-						{
-								UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEJSON_ERR_05A] Failed to parse level override object in file '%s'"), *File);
-								continue;
-						}
+			UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEJSON_ERR_03] JSON file %s missing 'LevelOverrides' array"), *File);
+			continue;
+		}
 
-			int32 UpgradeLevel = (*OverrideObj)->GetIntegerField(TEXT("UpgradeLevel"));
+		// Ensure there is always a level-0 override
+		const TSharedPtr<FJsonObject>* FirstOverrideObj;
+		if (!(*LevelOverrides)[0]->TryGetObject(FirstOverrideObj) || (*FirstOverrideObj)->GetIntegerField(Fields.UpgradeLevelField) != 0)
+		{
+			UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEJSON_ERR_04] First level override must be level 0 in file '%s'"), *File);
+			continue;
+		}
+
+		for (const TSharedPtr<FJsonValue>& OverrideVal : *LevelOverrides)
+		{
+			const TSharedPtr<FJsonObject>* OverrideObj;
+			if (!OverrideVal->TryGetObject(OverrideObj))
+			{
+				UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEJSON_ERR_05A] Failed to parse level override object in file '%s'"), *File);
+				continue;
+			}
+
+			int32 UpgradeLevel = (*OverrideObj)->GetIntegerField(Fields.UpgradeLevelField);
 			if (UpgradeLevel > MaxLevel)
 			{
 				UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEJSON_ERR_05] Invalid level range for level override in file '%s'. Level override starts at level %d, but max level is %d"),
-					   *File, UpgradeLevel, MaxLevel);
+				*File, UpgradeLevel, MaxLevel);
 				continue;
 			}
 
 			FUpgradeDefinition LevelData;
-			const TSharedPtr<FJsonObject> *ResCostsObj;
-			if ((*OverrideObj)->TryGetObjectField(TEXT("UpgradeResourceCosts"), ResCostsObj))
+			const TSharedPtr<FJsonObject>* ResCostsObj;
+			if ((*OverrideObj)->TryGetObjectField(Fields.UpgradeResourceCostsField, ResCostsObj))
 			{
-				for (const auto &Pair : (*ResCostsObj)->Values)
+				for (const auto& Pair : (*ResCostsObj)->Values)
 				{
 					FName ResourceName(*Pair.Key);
 					int32 OverrideValue = Pair.Value->AsNumber();
@@ -116,8 +119,8 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
 				}
 			}
 
-			LevelData.UpgradeSeconds = (*OverrideObj)->GetIntegerField(TEXT("UpgradeSeconds"));
-			LevelData.bUpgradeLocked = (*OverrideObj)->GetBoolField(TEXT("bUpgradeLocked"));
+			LevelData.UpgradeSeconds = (*OverrideObj)->GetIntegerField(Fields.UpgradeSecondsField);
+			LevelData.bUpgradeLocked = (*OverrideObj)->GetBoolField(Fields.UpgradeLockedField);
 			LevelDataArray[UpgradeLevel] = LevelData;
 			ProcessedLevels++;
 
@@ -127,60 +130,60 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
 			}
 		}
 
-				// Process values from resource cost scaling segments into the catalog.
-				const TSharedPtr<FJsonObject> *CostSegmentsObject;
-				if (Root->TryGetObjectField(TEXT("CostScalingSegments"), CostSegmentsObject))
+		// Process values from resource cost scaling segments into the catalog.
+		const TSharedPtr<FJsonObject>* CostSegmentsObject;
+		if (Root->TryGetObjectField(Fields.CostScalingSegmentsField, CostSegmentsObject))
+		{
+			// Iterate over each resource
+			for (const auto& ResourcePair : (*CostSegmentsObject)->Values)
+			{
+				FName ResourceName(*ResourcePair.Key);
+				if (!PreviousResourceCost.Contains(ResourceName))
 				{
-						// Iterate over each resource
-						for (const auto &ResourcePair : (*CostSegmentsObject)->Values)
-						{
-								FName ResourceName(*ResourcePair.Key);
-								if (!PreviousResourceCost.Contains(ResourceName))
-								{
-										UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEJSON_ERR_06] Invalid resource '%s' in file '%s'. Previous resource cost not found."), *ResourceName.ToString(), *File);
-										continue;
-								}
+					UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEJSON_ERR_06] Invalid resource '%s' in file '%s'. Previous resource cost not found."), *ResourceName.ToString(), *File);
+					continue;
+				}
 
-								const TSharedPtr<FJsonObject> *ResourceObj;
-								if (!ResourcePair.Value->TryGetObject(ResourceObj))
-								{
-										UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEJSON_ERR_13] Failed to parse resource object for '%s' in file '%s'"), *ResourceName.ToString(), *File);
-										continue;
-								}
+				const TSharedPtr<FJsonObject>* ResourceObj;
+				if (!ResourcePair.Value->TryGetObject(ResourceObj))
+				{
+					UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEJSON_ERR_13] Failed to parse resource object for '%s' in file '%s'"), *ResourceName.ToString(), *File);
+					continue;
+				}
 
-								const TArray<TSharedPtr<FJsonValue>> *SegmentsArray;
-								if (!(*ResourceObj)->TryGetArrayField(TEXT("ScalingSegments"), SegmentsArray))
-								{
-										UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEJSON_ERR_14] Missing 'ScalingSegments' for resource '%s' in file '%s'"), *ResourceName.ToString(), *File);
-										continue;
-								}
+				const TArray<TSharedPtr<FJsonValue>>* SegmentsArray;
+				if (!(*ResourceObj)->TryGetArrayField(Fields.ScalingSegmentsField, SegmentsArray))
+				{
+					UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEJSON_ERR_14] Missing 'ScalingSegments' for resource '%s' in file '%s'"), *ResourceName.ToString(), *File);
+					continue;
+				}
 
-								int32 PreviousSegmentEnd = 0;
-								int32 ResourceIndex = AddOrFindRequiredResourceTypeIndex(ResourceName, OutResourceTypes);
+				int32 PreviousSegmentEnd = 0;
+				int32 ResourceIndex = AddOrFindRequiredResourceTypeIndex(ResourceName, OutResourceTypes);
 
-								// Iterate over each segment within a resource
-								for (const TSharedPtr<FJsonValue> &SegmentValue : *SegmentsArray)
-								{
-										const TSharedPtr<FJsonObject> *SegmentObj;
-										if (!SegmentValue->TryGetObject(SegmentObj))
-										{
-												UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEJSON_ERR_15] Failed to parse segment object for resource '%s' in file '%s'"), *ResourceName.ToString(), *File);
-												continue;
-										}
+				// Iterate over each segment within a resource
+				for (const TSharedPtr<FJsonValue>& SegmentValue : *SegmentsArray)
+				{
+					const TSharedPtr<FJsonObject>* SegmentObj;
+					if (!SegmentValue->TryGetObject(SegmentObj))
+					{
+						UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEJSON_ERR_15] Failed to parse segment object for resource '%s' in file '%s'"), *ResourceName.ToString(), *File);
+						continue;
+					}
 
-										FRequirementsScalingSegment Segment;
-										ParseScalingSegment(*SegmentObj, Segment);
+					FRequirementsScalingSegment Segment;
+					ParseScalingSegment(*SegmentObj, Fields, Segment);
 
 					if ((PreviousSegmentEnd + 1) != Segment.StartLevel)
 					{
 						UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEJSON_ERR_07] Invalid segment range for resource '%s' in file '%s'. Segment starts at level %d, but previous segment ended at level %d."),
-							   *ResourceName.ToString(), *File, Segment.StartLevel, PreviousSegmentEnd);
+						*ResourceName.ToString(), *File, Segment.StartLevel, PreviousSegmentEnd);
 						break;
 					}
 					if (Segment.EndLevel > MaxLevel)
 					{
 						UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEJSON_ERR_08] Invalid level range for resource '%s' in file '%s'. Segment ends at level %d, but max level is %d"),
-							   *ResourceName.ToString(), *File, Segment.EndLevel, MaxLevel);
+						*ResourceName.ToString(), *File, Segment.EndLevel, MaxLevel);
 						break;
 					}
 
@@ -221,33 +224,33 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
 			}
 		}
 
-				// Process values from time scaling segments into the catalog.
-				const TArray<TSharedPtr<FJsonValue>> *TimeSegmentsArray;
-				if (Root->TryGetArrayField(TEXT("TimeScalingSegments"), TimeSegmentsArray))
+		// Process values from time scaling segments into the catalog.
+		const TArray<TSharedPtr<FJsonValue>>* TimeSegmentsArray;
+		if (Root->TryGetArrayField(Fields.TimeScalingSegmentsField, TimeSegmentsArray))
+		{
+			int32 PreviousSegmentEnd = 0;
+			for (const TSharedPtr<FJsonValue>& SegmentValue : *TimeSegmentsArray)
+			{
+				const TSharedPtr<FJsonObject>* SegmentObj;
+				if (!SegmentValue->TryGetObject(SegmentObj))
 				{
-						int32 PreviousSegmentEnd = 0;
-						for (const TSharedPtr<FJsonValue> &SegmentValue : *TimeSegmentsArray)
-						{
-								const TSharedPtr<FJsonObject> *SegmentObj;
-								if (!SegmentValue->TryGetObject(SegmentObj))
-								{
-										UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEJSON_ERR_16] Failed to parse time segment object in file '%s'"), *File);
-										continue;
-								}
+					UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEJSON_ERR_16] Failed to parse time segment object in file '%s'"), *File);
+					continue;
+				}
 
-								FRequirementsScalingSegment Segment;
-								ParseScalingSegment(*SegmentObj, Segment);
+				FRequirementsScalingSegment Segment;
+				ParseScalingSegment(*SegmentObj, Fields, Segment);
 
 				if (PreviousSegmentEnd != Segment.StartLevel)
 				{
 					UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEJSON_ERR_09] Invalid segment range for time cost in file '%s'. Segment starts at level %d, but previous segment ended at level %d."),
-						   *File, Segment.StartLevel, PreviousSegmentEnd);
+					*File, Segment.StartLevel, PreviousSegmentEnd);
 					break;
 				}
 				if (Segment.EndLevel > MaxLevel)
 				{
 					UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEJSON_ERR_10] Invalid level range for time costs in file '%s'. Segment ends at level %d, but max level is %d"),
-						   *File, Segment.EndLevel, MaxLevel);
+					*File, Segment.EndLevel, MaxLevel);
 					break;
 				}
 
@@ -293,44 +296,45 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
 		return;
 	}
 
-UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEJSON_INFO_04] Loaded %d JSON files (found %d PathIds)"), LoadedFiles, OutCatalog.Num());
+	UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEJSON_INFO_04] Loaded %d JSON files (found %d PathIds)"), LoadedFiles, OutCatalog.Num());
 }
 
-bool UUpgradeJsonProvider::ParseScalingSegment(const TSharedPtr<FJsonObject>& JsonObject, FRequirementsScalingSegment& OutSegment) const
+bool UUpgradeJsonProvider::ParseScalingSegment(const TSharedPtr<FJsonObject>& JsonObject, const FUpgradeJsonFieldNames& Fields,
+	FRequirementsScalingSegment& OutSegment) const
 {
-		if (!JsonObject.IsValid())
-		{
-				UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEJSON_ERR_17] Invalid scaling segment object"));
-				return false;
-		}
+	if (!JsonObject.IsValid())
+	{
+		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEJSON_ERR_17] Invalid scaling segment object"));
+		return false;
+	}
 
-	OutSegment.StartLevel = JsonObject->GetIntegerField(TEXT("StartLevel"));
-	OutSegment.EndLevel = JsonObject->GetIntegerField(TEXT("EndLevel"));
+	OutSegment.StartLevel = JsonObject->GetIntegerField(Fields.StartLevelField);
+	OutSegment.EndLevel = JsonObject->GetIntegerField(Fields.EndLevelField);
 
-	FString ModeStr = JsonObject->GetStringField(TEXT("ScalingMode"));
+	FString ModeStr = JsonObject->GetStringField(Fields.ScalingModeField);
 	UEnum* EnumPtr = StaticEnum<ECostScalingMode>();
 	OutSegment.ScalingMode = EnumPtr ? static_cast<ECostScalingMode>(EnumPtr->GetValueByNameString(ModeStr)) : ECostScalingMode::HardCoded;
 
 	switch (OutSegment.ScalingMode)
 	{
 	case ECostScalingMode::Constant:
-		JsonObject->TryGetNumberField(TEXT("ConstantCost"), OutSegment.ConstantCost);
+		JsonObject->TryGetNumberField(Fields.ConstantCostField, OutSegment.ConstantCost);
 		break;
 	case ECostScalingMode::Linear:
-		JsonObject->TryGetNumberField(TEXT("LinearSlope"), OutSegment.LinearSlope);
+		JsonObject->TryGetNumberField(Fields.LinearSlopeField, OutSegment.LinearSlope);
 		break;
 	case ECostScalingMode::Exponential:
-		JsonObject->TryGetNumberField(TEXT("ExpRate"), OutSegment.ExpRate);
+		JsonObject->TryGetNumberField(Fields.ExpRateField, OutSegment.ExpRate);
 		break;
 	case ECostScalingMode::Polynomial:
-		JsonObject->TryGetNumberField(TEXT("PolyCoeff"), OutSegment.PolyCoeff);
-		JsonObject->TryGetNumberField(TEXT("PolyPower"), OutSegment.PolyPower);
-		JsonObject->TryGetNumberField(TEXT("PolyOffset"), OutSegment.PolyOffset);
+		JsonObject->TryGetNumberField(Fields.PolyCoeffField, OutSegment.PolyCoeff);
+		JsonObject->TryGetNumberField(Fields.PolyPowerField, OutSegment.PolyPower);
+		JsonObject->TryGetNumberField(Fields.PolyOffsetField, OutSegment.PolyOffset);
 		break;
 	case ECostScalingMode::Custom:
 		{
 			FString CustomName;
-			if (JsonObject->TryGetStringField(TEXT("CustomFunctionName"), CustomName))
+			if (JsonObject->TryGetStringField(Fields.CustomFunctionNameField, CustomName))
 			{
 				OutSegment.CustomFunctionName = FName(*CustomName);
 			}
