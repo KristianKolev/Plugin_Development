@@ -29,9 +29,6 @@ struct PLUGIN_DEVELOPMENT_API FUpgradableComponentData
 	TWeakObjectPtr<UUpgradableComponent> Component = nullptr;
 
 	UPROPERTY()
-	TWeakObjectPtr<AActor> Owner = nullptr;
-
-	UPROPERTY()
 	EUpgradableAspect Aspect = EUpgradableAspect::None;
 
 	UPROPERTY()
@@ -202,7 +199,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Upgrade System|Timer")
 	float GetInProgressTotalUpgradeTime(int32 ComponentId) const;
 	// END section upgrade timers
-
+	
 	// START section getters that return resource info
 
 	/** Get the index from the encountered resources array for the specified resource type from the */
@@ -234,6 +231,8 @@ protected:
 	/** Cached data for each registered component indexed by component ID */
 	UPROPERTY()
 	TArray<FUpgradableComponentData> ComponentData;
+
+	TMap<TWeakObjectPtr<AActor>, TArray<int32>> ComponentsByActor;
 
 	// Maps each component ID to the data for their pending upgrade.
 	UPROPERTY()

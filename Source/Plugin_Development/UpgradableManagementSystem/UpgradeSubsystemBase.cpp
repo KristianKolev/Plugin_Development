@@ -63,7 +63,6 @@ int32 UUpgradeSubsystemBase::RegisterUpgradableComponent(UUpgradableComponent* C
 	if (Component)
 	{
 		Entry.Component = Component;
-		Entry.Owner = Component->GetOwner();
 		Entry.UpgradePathId = Component->UpgradePathId;
 		Entry.Aspect = Component->GetUpgradableAspect();
 		Entry.Category = Component->GetUpgradableCategory();
@@ -80,6 +79,9 @@ int32 UUpgradeSubsystemBase::RegisterUpgradableComponent(UUpgradableComponent* C
 	{
 		Id = ComponentData.Add(Entry);
 	}
+
+	TArray<int32>& StoredIds = ComponentsByActor.FindOrAdd(Component->GetOwner());
+	StoredIds.Add(Id);
 	
 	if (UE_LOG_ACTIVE(LogUpgradeSystem, Verbose))
 	{
@@ -90,7 +92,9 @@ int32 UUpgradeSubsystemBase::RegisterUpgradableComponent(UUpgradableComponent* C
 }
 
 void UUpgradeSubsystemBase::UnregisterUpgradableComponent(int32 ComponentId)
-	{
+{
+	TArray<int32>& StoredIds = ComponentsByActor.FindChecked(GetComponentById(ComponentId)->GetOwner());
+	StoredIds.Remove(ComponentId);
 	if (ComponentData.IsValidIndex(ComponentId))
 	{
 		if (IsUpgradeTimerActive(ComponentId))
@@ -240,13 +244,16 @@ UUpgradableComponent* UUpgradeSubsystemBase::FindComponentOnActorByAspect(AActor
 	if (!TargetActor) return nullptr;
 	// We prefer doing this, rather than using GetComponent on the TargetActor, since the Actor might have a long list of components.
 	// In most real world use cases, this would be more performant.
-	for (const FUpgradableComponentData& Entry : ComponentData)
+	if (ComponentsByActor.Contains(TargetActor))
 	{
-		if (Entry.Aspect != Aspect) continue;
-		if (!Entry.Component.IsValid())	continue;
-		if (Entry.Owner.Get() != TargetActor) continue;
-		
-		return Entry.Component.Get();
+		const TArray<int32>& StoredIds = ComponentsByActor.FindChecked(TargetActor);
+		for (int32 Id : StoredIds)
+		{
+			if (ComponentData.IsValidIndex(Id) && ComponentData[Id].Aspect == Aspect)
+			{
+				return ComponentData[Id].Component.Get();
+			}
+		}
 	}
 	return nullptr;
 }
@@ -257,13 +264,16 @@ UUpgradableComponent* UUpgradeSubsystemBase::FindComponentOnActorByCategory(AAct
 	if (!TargetActor) return nullptr;
 	// We prefer doing this, rather than using GetComponent on the TargetActor, since the Actor might have a long list of components.
 	// In most real world use cases, this would be more performant.
-	for (const FUpgradableComponentData& Entry : ComponentData)
+	if (ComponentsByActor.Contains(TargetActor))
 	{
-		if (Entry.Category != Category) continue;
-		if (!Entry.Component.IsValid())	continue;
-		if (Entry.Owner.Get() != TargetActor) continue;
-		
-		return Entry.Component.Get();
+		const TArray<int32>& StoredIds = ComponentsByActor.FindChecked(TargetActor);
+		for (int32 Id : StoredIds)
+		{
+			if (ComponentData.IsValidIndex(Id) && ComponentData[Id].Category == Category)
+			{
+				return ComponentData[Id].Component.Get();
+			}
+		}
 	}
 	
 	return nullptr;
@@ -309,14 +319,17 @@ TArray<UUpgradableComponent*> UUpgradeSubsystemBase::GetComponentsByActor(AActor
 	if (!TargetActor) return Results;
 	// We prefer doing this, rather than using GetComponent on the TargetActor, since the Actor might have a long list of components.
 	// In most real world use cases, this would be more performant.
-	for (const FUpgradableComponentData& Entry : ComponentData)
+	if (ComponentsByActor.Contains(TargetActor))
 	{
-		if (!Entry.Component.IsValid())	continue;
-		if (Entry.Owner.Get() != TargetActor) continue;
-		
-		Results.Add(Entry.Component.Get());
+		const TArray<int32>& StoredIds = ComponentsByActor.FindChecked(TargetActor);
+		for (int32 Id : StoredIds)
+		{
+			if (ComponentData.IsValidIndex(Id) && ComponentData[Id].Component.IsValid())
+			{
+				Results.Add(ComponentData[Id].Component.Get());
+			}
+		}
 	}
-	
 	return Results;
 }
 
