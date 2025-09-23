@@ -585,6 +585,7 @@ const TArray<FUpgradeDefinition>* UUpgradeSubsystemBase::GetUpgradeDefinitions(F
 	if (!UpgradeCatalog.Contains(UpgradePathId))
 	{
 		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_08] Missing upgrade definitions for path '%s'"), *UpgradePathId.ToString());
+
 		return nullptr;
 	}
 	
@@ -599,6 +600,7 @@ const TArray<FUpgradeDefinition>* UUpgradeSubsystemBase::GetUpgradeDefinitions(i
 	{
 		const FName UpgradePathId = ComponentData[ComponentId].UpgradePathId;
 		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_09] Missing upgrade definitions for path '%s' on component %d"), *UpgradePathId.ToString(), ComponentId);
+
 		return nullptr;
 	}
 	

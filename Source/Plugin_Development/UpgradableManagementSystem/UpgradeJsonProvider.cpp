@@ -189,6 +189,8 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
 
 					for (int32 i = Segment.StartLevel; i <= Segment.EndLevel; ++i)
 					{
+						
+						// Resource type is not yet added for this level - add it with computed cost
 						int32 CostArrayIndex = LevelDataArray[i].ResourceTypeIndices.IndexOfByKey(ResourceIndex);
 						if (CostArrayIndex == INDEX_NONE)
 						{
@@ -197,20 +199,26 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
 							LevelDataArray[i].UpgradeCosts.Add(ResourceCost);
 							PreviousResourceCost.FindChecked(ResourceName) = ResourceCost;
 						}
+						// Resource costs already added through a level override
 						else
 						{
 							int32 CurrentResourceCost = LevelDataArray[i].UpgradeCosts[CostArrayIndex];
 							int32 ResourceCost = 0;
+							// Compute the cost based on the previous level cost
 							if (CurrentResourceCost < 0)
 							{
 								ResourceCost = ComputeRequirementsBySegment(&Segment, PreviousResourceCost.FindChecked(ResourceName), i);
 								PreviousResourceCost.FindChecked(ResourceName) = ResourceCost;
 							}
+							// Cost 0 as per level override, but compute what cost would have been based on scaling method
+							// Next level will scale without skipping a data point
 							else if (CurrentResourceCost == 0)
 							{
 								ResourceCost = CurrentResourceCost;
 								PreviousResourceCost.FindChecked(ResourceName) = ComputeRequirementsBySegment(&Segment, PreviousResourceCost.FindChecked(ResourceName), i);
 							}
+							// This level's cost is determined from the level override.
+							// We rebase the scaling off of this cost.
 							else
 							{
 								ResourceCost = CurrentResourceCost;
@@ -258,16 +266,22 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
 				{
 					int32 CurrentTimeCost = LevelDataArray[i].UpgradeSeconds;
 					int32 TimeCost = 0;
+					// Default value of -1, means no override present or override doesn't define this cost
+					// Compute the cost based on the previous level cost
 					if (CurrentTimeCost < 0)
 					{
 						TimeCost = ComputeRequirementsBySegment(&Segment, PreviousTimeCost, i);
 						PreviousTimeCost = TimeCost;
 					}
+					// Cost 0 as per level override, but compute what cost would have been based on scaling method
+					// Next level will scale without skipping a data point
 					else if (CurrentTimeCost == 0)
 					{
 						TimeCost = CurrentTimeCost;
 						PreviousTimeCost = ComputeRequirementsBySegment(&Segment, PreviousTimeCost, i);
 					}
+					// This level's cost is determined from the level override.
+					// We rebase the scaling off of this cost.
 					else
 					{
 						TimeCost = CurrentTimeCost;
@@ -281,7 +295,7 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
 
 		if (ProcessedLevels > 0)
 		{
-			UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEJSON_INFO_03] Successfully processed file '%s' with %d levels"), *FPaths::GetCleanFilename(File), ProcessedLevels);
+			UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEJSON_INFO_03] Successfully processed file '%s' containing path id '%s' with %d levels"), *FPaths::GetCleanFilename(File), *PathId.ToString(), ProcessedLevels);
 			LoadedFiles++;
 		}
 		else
