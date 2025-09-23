@@ -158,7 +158,7 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
 					continue;
 				}
 
-				int32 PreviousSegmentEnd = 0;
+				int32 PreviousSegmentEnd = -1;
 				int32 ResourceIndex = AddOrFindRequiredResourceTypeIndex(ResourceName, OutResourceTypes);
 
 				// Iterate over each segment within a resource
@@ -228,7 +228,7 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
 		const TArray<TSharedPtr<FJsonValue>>* TimeSegmentsArray;
 		if (Root->TryGetArrayField(Fields.TimeScalingSegmentsField, TimeSegmentsArray))
 		{
-			int32 PreviousSegmentEnd = 0;
+			int32 PreviousSegmentEnd = -1;
 			for (const TSharedPtr<FJsonValue>& SegmentValue : *TimeSegmentsArray)
 			{
 				const TSharedPtr<FJsonObject>* SegmentObj;
@@ -241,7 +241,7 @@ void UUpgradeJsonProvider::InitializeData(TMap<FName, TArray<FUpgradeDefinition>
 				FRequirementsScalingSegment Segment;
 				ParseScalingSegment(*SegmentObj, Fields, Segment);
 
-				if (PreviousSegmentEnd != Segment.StartLevel)
+				if (PreviousSegmentEnd + 1 != Segment.StartLevel)
 				{
 					UE_LOG(LogUpgradeSystem, Error, TEXT("[UPGRADEJSON_ERR_09] Invalid segment range for time cost in file '%s'. Segment starts at level %d, but previous segment ended at level %d."),
 					*File, Segment.StartLevel, PreviousSegmentEnd);
