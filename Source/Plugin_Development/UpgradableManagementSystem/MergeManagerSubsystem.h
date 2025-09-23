@@ -33,10 +33,8 @@ public:
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 
 	// Expects that InComponents.Num() == ComponentsToMerge
-	bool CanMerge(TArray<int32> InComponentIds, int32 ComponentsToMerge = 2, const TMap<FName, int32>& AvailableResources, EMergeMode MergeMode = {});
-	bool HandleMergeRequest(TArray<int32> ComponentIds, int32 ComponentsToMerge = 2, const TMap<FName, int32>& AvailableResources, EMergeMode MergeMode = {}, TArray
-	                        <int32>& OutConsumedComponentIds);
+	bool CanMerge(TArray<int32> InComponentIds, int32 ComponentsToMerge = 2, const TMap<FName, int32>& AvailableResources = TMap<FName, int32>(), EMergeMode MergeMode = EMergeMode::None);
+	bool HandleMergeRequest(TArray<int32> ComponentIds, int32 ComponentsToMerge, const TMap<FName, int32>& AvailableResources, EMergeMode MergeMode, TArray<int32>& OutConsumedComponentIds);
 	void CleanupConsumedComponents(TArray<int32> ConsumedComponentIds);
 
-	// Change for testing push to branch from rider
 };
