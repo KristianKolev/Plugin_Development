@@ -123,49 +123,60 @@ bool UUpgradeSubsystemBase::CanUpgrade(const int32 ComponentId, const int32 Leve
 		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_00] Component %d not registered"), ComponentId);
 		return false;
 	}
+
+	if (!GetUpgradeDefinitions(ComponentId))
+	{
+		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_01] No upgrade definitions for component %d"), ComponentId);
+		return false;
+	}
 	// Future implementation idea: Add upgrade queue to chain multiple upgrades
 	if (IsUpgradeTimerActive(ComponentId))
 	{
-		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_01] Component %d already upgrading"), ComponentId);
+		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_02] Component %d already upgrading"), ComponentId);
 		return false;
 	}
 
 	if (LevelIncrease <= 0)
 	{
-		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_02] Invalid level increase %d for component %d"), LevelIncrease, ComponentId);
+		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_03] Invalid level increase %d for component %d"), LevelIncrease, ComponentId);
 		return false;
 	}
+	
 	// Trying to upgrade to a level higher than the max level
 	if (GetCurrentLevel(ComponentId) + LevelIncrease > GetMaxLevel(ComponentId))
 	{
-		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_03] Requested level exceeds max for component %d"), ComponentId);
+		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_04] Requested level exceeds max for component %d"), ComponentId);
 		return false;
 	}
-
-	if (const TArray<FUpgradeDefinition>* UpgradeDefinitions = GetUpgradeDefinitions(ComponentId))
+	
 	{
+		const TArray<FUpgradeDefinition>* UpgradeDefinitions = GetUpgradeDefinitions(ComponentId);
 		const FUpgradeDefinition* LevelData = nullptr;
 
 		TMap<FName, int32> TotalResourceCosts;
+		
 		// Iterate over all levels if trying to upgrade several levels at once
 		for (int32 i = GetNextLevel(ComponentId); i <= GetCurrentLevel(ComponentId) + LevelIncrease; ++i)
 		{
 			LevelData = &(*UpgradeDefinitions)[i];
+			// Trying to upgrade to a level that is locked by a prerequisite
 			if (LevelData->bUpgradeLocked)
 			{
-				UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_04] Level %d locked for component %d"), i, ComponentId);
+				UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_05] Level %d locked for component %d"), i, ComponentId);
 				return false;
 			}
 			FName ResourceType ;
+			
 			// Add up the required resource cost for each resource for this level
 			for (int32 j = 0; j < LevelData->ResourceTypeIndices.Num(); ++j)
 			{
 				ResourceType = GetResourceTypeName(LevelData->ResourceTypeIndices[j]);
+
 				// no resource of the required type was provided
 				if (!AvailableResources.Contains(ResourceType))
 				{
-				UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_05] Missing resource '%s' for component %d"), *ResourceType.ToString(), ComponentId);
-				return false;
+					UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_06] Missing resource '%s' for component %d"), *ResourceType.ToString(), ComponentId);
+					return false;
 				}
 				TotalResourceCosts.FindOrAdd(ResourceType) += LevelData->UpgradeCosts[j];
 			}
@@ -177,14 +188,15 @@ bool UUpgradeSubsystemBase::CanUpgrade(const int32 ComponentId, const int32 Leve
 			// not enough resources of the required type
 			if (TotalResourceCosts[ResourceType] > AvailableResources.FindRef(ResourceType))
 			{
-		       UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_06] Insufficient '%s' for component %d"), *ResourceType.ToString(), ComponentId);
-		       return false;
+				UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_07] Insufficient '%s' for component %d"), *ResourceType.ToString(), ComponentId);
+				return false;
 			}
 		}
 
 		Success = true;
-		UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEMGR_INFO_02] Component %d can upgrade by %d levels"), ComponentId, LevelIncrease);
+		UE_LOG(LogUpgradeSystem, Log, TEXT("[UPGRADEMGR_INFO_02] Component %d can upgrade by %d level(s)"), ComponentId, LevelIncrease);
 	}
+	
 	return Success;
 }
 
@@ -373,7 +385,11 @@ int32 UUpgradeSubsystemBase::GetNextLevel(const int32 ComponentId) const
 
 int32 UUpgradeSubsystemBase::GetMaxLevel(const int32 ComponentId) const
 {
-	return GetUpgradeDefinitions(ComponentId)->Num()-1;
+	if (GetUpgradeDefinitions(ComponentId))
+	{
+		return GetUpgradeDefinitions(ComponentId)->Num()-1;
+	}
+	return -1;
 }
 
 int32 UUpgradeSubsystemBase::GetInProgressLevelIncrease(const int32 ComponentId) const
@@ -566,12 +582,25 @@ void UUpgradeSubsystemBase::OnUpgradeTimerFinished(int32 ComponentId)
 
 const TArray<FUpgradeDefinition>* UUpgradeSubsystemBase::GetUpgradeDefinitions(FName UpgradePathId) const
 {
+	if (!UpgradeCatalog.Contains(UpgradePathId))
+	{
+		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_08] Missing upgrade definitions for path '%s'"), *UpgradePathId.ToString());
+		return nullptr;
+	}
+	
 	return UpgradeCatalog.Find(UpgradePathId);
 }
 
 const TArray<FUpgradeDefinition>* UUpgradeSubsystemBase::GetUpgradeDefinitions(int32 ComponentId) const
 {
 	if (!ComponentData.IsValidIndex(ComponentId)) return nullptr;
+
+	if (!UpgradeCatalog.Contains(ComponentData[ComponentId].UpgradePathId))
+	{
+		const FName UpgradePathId = ComponentData[ComponentId].UpgradePathId;
+		UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEMGR_ERR_09] Missing upgrade definitions for path '%s' on component %d"), *UpgradePathId.ToString(), ComponentId);
+		return nullptr;
+	}
 	
 	return UpgradeCatalog.Find(ComponentData[ComponentId].UpgradePathId);
 }
