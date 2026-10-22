@@ -31,7 +31,7 @@ void UUpgradeDataAssetProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
         if (!Asset)
         {
             UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADEASSET_ERR_01] Failed to load UpgradeDefinitionDataAsset '%s'"), 
-                *AssetData.ObjectPath.ToString());
+                *AssetData.GetObjectPathString());
             continue;
         }
         ++LoadedAssets;

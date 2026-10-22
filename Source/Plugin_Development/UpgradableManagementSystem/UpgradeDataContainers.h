@@ -14,9 +14,9 @@ struct PLUGIN_DEVELOPMENT_API FUpgradeDefinition
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<int32> UpgradeCosts;
-
+	// Default value of -1 means, when initializing the catalog, we will use the scaling method from the upgrade path definition
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	int32 UpgradeSeconds = 0;
+	int32 UpgradeSeconds = -1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool bUpgrading = false;

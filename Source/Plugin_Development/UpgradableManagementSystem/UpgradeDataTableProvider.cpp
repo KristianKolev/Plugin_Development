@@ -30,7 +30,7 @@ void UUpgradeDataTableProvider::InitializeData(TMap<FName, TArray<FUpgradeDefini
         UDataTable* Table = Cast<UDataTable>(AssetData.GetAsset());
         if (!Table)
         {
-            UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADETABLE_ERR_01] Failed to load DataTable '%s'"), *AssetData.ObjectPath.ToString());
+            UE_LOG(LogUpgradeSystem, Warning, TEXT("[UPGRADETABLE_ERR_01] Failed to load DataTable '%s'"), *AssetData.GetObjectPathString());
             continue;
         }
         ++LoadedTables;

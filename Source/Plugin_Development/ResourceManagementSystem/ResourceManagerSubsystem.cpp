@@ -43,14 +43,14 @@ void UResourceManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		if (!Asset)
 		{
             UE_LOG(LogResourceSystem, Warning, TEXT("[RESOURCEMGR_ERR_01] Failed to load UResourceDefinition '%s'"),
-				*AssetData.ObjectPath.ToString());
+				*AssetData.GetObjectPathString());
 			continue;
 		}
 		
 		if (Definitions.Contains(Asset->ResourceName))
 		{
 	        UE_LOG(LogResourceSystem, Warning, TEXT("[RESOURCEMGR_ERR_02] Duplicate ResourceName '%s' in %s"),
-	        	*Asset->ResourceName.ToString(), *AssetData.ObjectPath.ToString());
+				*Asset->ResourceName.ToString(), *AssetData.GetObjectPathString());
         }
         Definitions.Add(Asset->ResourceName, Asset);
         UE_LOG(LogResourceSystem, Log, TEXT("[RESOURCEMGR_INFO_03] Registered Definition '%s' (Name: %s)"),
