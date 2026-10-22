@@ -1,0 +1,54 @@
+{
+	"UpgradePathId": "StoneFortification",
+	"MaxLevel": 12,
+	"CostScalingSegments": {
+		"Stone": {
+			"ScalingSegments": [
+				{
+					"StartLevel": 0,
+					"EndLevel": 12,
+					"ScalingMode": "Constant",
+					"ConstantCost": 50
+				}
+			]
+		},
+		"Wood": {
+			"ScalingSegments": [
+				{
+					"StartLevel": 0,
+					"EndLevel": 12,
+					"ScalingMode": "Linear",
+					"LinearSlope": 20
+				}
+			]
+		}
+	},
+	"TimeScalingSegments": [
+		{
+			"StartLevel": 0,
+			"EndLevel": 12,
+			"ScalingMode": "Linear",
+			"LinearSlope": 3
+		}
+	],
+	"LevelOverrides": [
+		{
+			"UpgradeLevel": 0,
+			"UpgradeResourceCosts": {
+				"Stone": 50,
+				"Wood": 20
+			},
+			"UpgradeSeconds": 0,
+			"bUpgradeLocked": false
+		},
+		{
+			"UpgradeLevel": 6,
+			"UpgradeResourceCosts": {
+				"Stone": 50,
+				"Wood": 120
+			},
+			"UpgradeSeconds": 18,
+			"bUpgradeLocked": false
+		}
+	]
+}
