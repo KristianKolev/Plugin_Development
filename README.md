@@ -4,6 +4,20 @@ A modular framework for prototyping, testing, and packaging Unreal Engine gamepl
 
 **Status**: WIP — actively evolving components and subsystems.
 
+## Engine and build
+
+The project targets Unreal Engine 5.8. Both targets use the 5.8 include order and V7 build settings.
+Install Visual Studio 2022 with the Unreal Engine C++ toolchain and a Windows SDK.
+
+From a Windows command prompt, replace the engine path below with your Unreal Engine 5.8 installation:
+
+```bat
+"C:\UnrealEngineEditor\UE_5.8\Engine\Build\BatchFiles\Build.bat" Plugin_DevelopmentEditor Win64 Development -Project="%CD%\Plugin_Development.uproject" -WaitMutex -NoHotReloadFromIDE
+"C:\UnrealEngineEditor\UE_5.8\Engine\Build\BatchFiles\Build.bat" Plugin_Development Win64 Development -Project="%CD%\Plugin_Development.uproject" -WaitMutex -NoHotReloadFromIDE
+```
+
+AutoSizeComments, RestartEditor, and AssetsCleaner are optional editor tools. The project can build and open without them; installed compatible versions remain enabled.
+
 ---
 
 ## Project Structure

@@ -72,7 +72,7 @@ int32 UUpgradeSubsystemBase::RegisterUpgradableComponent(UUpgradableComponent* C
 	
 	if (FreeComponentIndices.Num() > 0)
 	{
-		Id = FreeComponentIndices.Pop(/*bAllowShrinking=*/false);
+		Id = FreeComponentIndices.Pop(EAllowShrinking::No);
 		ComponentData[Id] = Entry;
 	}
 	else
